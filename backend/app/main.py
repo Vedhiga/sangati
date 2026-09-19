@@ -16,12 +16,12 @@ logging.basicConfig(
     level=logging.INFO if settings.ENVIRONMENT == "production" else logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
-logger = logging.getLogger("sidequest.main")
+logger = logging.getLogger("sangati.main")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting up SideQuest API in %s mode...", settings.ENVIRONMENT)
+    logger.info("Starting up Sangati API in %s mode...", settings.ENVIRONMENT)
     # For dev convenience or SQLite testing, ensure tables exist
     try:
         Base.metadata.create_all(bind=engine)
@@ -39,13 +39,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Could not auto-create database tables on startup (migrations may be required): %s", e)
     yield
-    logger.info("Shutting down SideQuest API...")
+    logger.info("Shutting down Sangati API...")
 
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
-    description="SideQuest Core Backend API - Module 1: Authentication & Basic Profiles",
+    description="Sangati Core Backend API",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",

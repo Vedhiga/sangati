@@ -75,7 +75,7 @@ export function Navbar() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-foreground">
             <Compass className="h-4.5 w-4.5 text-primary" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">SideQuest</span>
+          <span className="text-lg font-semibold tracking-tight">Sangati</span>
         </Link>
 
         <nav className="flex items-center gap-1.5 sm:gap-2">

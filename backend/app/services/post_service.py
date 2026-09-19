@@ -33,7 +33,7 @@ def _build_author_public(profile: Optional[Profile], author_id: UUID) -> AuthorP
     return AuthorPublic(
         user_id=author_id,
         username="unknown",
-        display_name="SideQuest User",
+        display_name="Sangati User",
         avatar_url=None,
     )
 

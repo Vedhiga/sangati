@@ -5,12 +5,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "SideQuest"
+    PROJECT_NAME: str = "Sangati"
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: str = "development"
 
     # Database
-    DATABASE_URL: str = "sqlite:///./sidequest_dev.db"
+    DATABASE_URL: str = "sqlite:////tmp/sangati_dev.db"
 
     # Supabase Auth
     SUPABASE_URL: str = ""
