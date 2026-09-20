@@ -124,21 +124,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }
     });
 
-    const intervalId = setInterval(() => {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          api.get<UnreadCountResponse>("/api/v1/conversations/unread-count").then((res) => {
-            setUnreadMessagesCount(res.count);
-          }).catch(() => {});
-        }
-      });
-    }, 5000);
-
     return () => {
       subscription.unsubscribe();
-      clearInterval(intervalId);
     };
-  }, [pathname]);
+  }, []);
+
+  // Poll unread count periodically when user is logged in
+  useEffect(() => {
+    if (!sessionUser) return;
+
+    const intervalId = setInterval(() => {
+      api.get<UnreadCountResponse>("/api/v1/conversations/unread-count")
+        .then((res) => {
+          setUnreadMessagesCount(res.count);
+        })
+        .catch(() => {});
+    }, 10000); // 10-second interval
+
+    return () => clearInterval(intervalId);
+  }, [sessionUser]);
 
   const fetchSidebarData = async () => {
     try {

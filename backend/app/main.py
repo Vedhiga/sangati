@@ -20,8 +20,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger("sangati.main")
 
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "static", "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads")
+try:
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+except Exception as e:
+    logger.warning("Read-only filesystem detected on startup: %s", e)
 
 
 @asynccontextmanager
@@ -46,8 +50,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Mount static uploads directory
-app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
+# Mount static files directory safely if it exists on disk
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Register custom error response handlers
 register_error_handlers(app)

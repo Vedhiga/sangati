@@ -1,9 +1,10 @@
 import os
 import uuid
 import re
+import tempfile
 from typing import Optional
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 import urllib.request
 from html.parser import HTMLParser
 
@@ -11,14 +12,26 @@ from app.core.security import get_current_user, AuthenticatedUser
 
 router = APIRouter(prefix="/media", tags=["Media"])
 
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "static", "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10 MB
 MAX_VIDEO_SIZE = 50 * 1024 * 1024  # 50 MB
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 ALLOWED_VIDEO_TYPES = {"video/mp4", "video/webm", "video/quicktime"}
+
+
+def get_upload_dir() -> str:
+    target_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+        "static",
+        "uploads",
+    )
+    try:
+        os.makedirs(target_dir, exist_ok=True)
+        return target_dir
+    except Exception:
+        tmp_dir = os.path.join(tempfile.gettempdir(), "sangati_uploads")
+        os.makedirs(tmp_dir, exist_ok=True)
+        return tmp_dir
 
 
 class LinkPreviewRequest(BaseModel):
@@ -85,7 +98,8 @@ async def upload_media(
 
     ext = os.path.splitext(file.filename or "")[1] or (".mp4" if is_video else ".jpg")
     filename = f"{uuid.uuid4().hex}{ext}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
+    upload_dir = get_upload_dir()
+    file_path = os.path.join(upload_dir, filename)
 
     with open(file_path, "wb") as f:
         f.write(contents)
