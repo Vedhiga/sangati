@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.models.profile import Profile
 from app.models.activity import UserActivity
 from app.schemas.discovery import DiscoveryPerson, DiscoveryResponse
-from app.schemas.activity import ActivityType
+from app.schemas.activity import ActivityType, safe_parse_activity_type
 from app.services.activity_service import ActivityService
 from app.services.profile_service import ProfileService
 
@@ -140,12 +140,7 @@ class DiscoveryService:
             else:
                 match_reason = "Community member"
 
-            activity_enum = None
-            if cand_activity:
-                try:
-                    activity_enum = ActivityType(cand_activity)
-                except ValueError:
-                    activity_enum = None
+            activity_enum = safe_parse_activity_type(cand_activity) if cand_activity else None
 
             person = DiscoveryPerson(
                 id=profile.id,
@@ -177,12 +172,7 @@ class DiscoveryService:
                     p.connection_status = status
                     p.connection_id = conn_id
 
-        current_activity_enum = None
-        if current_user_activity:
-            try:
-                current_activity_enum = ActivityType(current_user_activity)
-            except ValueError:
-                current_activity_enum = None
+        current_activity_enum = safe_parse_activity_type(current_user_activity) if current_user_activity else None
 
         return DiscoveryResponse(
             people=paginated_people,

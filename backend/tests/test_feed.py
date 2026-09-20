@@ -239,3 +239,36 @@ def test_own_posts_included_in_feed(client, test_user_id):
     feed_post_ids = [p["id"] for p in posts]
     assert my_post_id in feed_post_ids
 
+
+def test_feed_robust_activity_type_and_media_handling(client, test_user_id, db_session):
+    token = create_mock_jwt(test_user_id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    client.post(
+        "/api/v1/profile",
+        json={"username": "robust_user", "display_name": "Robust User"},
+        headers=headers,
+    )
+
+    # Insert post directly into DB with lowercase activity_type and media attachment
+    post = ActivityPost(
+        id=uuid.uuid4(),
+        author_id=test_user_id,
+        activity_type="build",  # Lowercase string in DB
+        content="Testing post with lowercase activity_type and media attachments.",
+        media_url="https://example.com/image.jpg",
+        media_type="image",
+        link_url="https://example.com",
+        link_title="Example Link",
+    )
+    db_session.add(post)
+    db_session.commit()
+
+    # Query GET /api/v1/feed?limit=20&offset=0
+    res = client.get("/api/v1/feed?limit=20&offset=0", headers=headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert "posts" in data
+    assert any(p["id"] == str(post.id) for p in data["posts"])
+
+

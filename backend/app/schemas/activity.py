@@ -11,6 +11,16 @@ class ActivityType(str, Enum):
     EXPLORE = "EXPLORE"
 
 
+def safe_parse_activity_type(val: object) -> ActivityType:
+    if not val:
+        return ActivityType.EXPLORE
+    cleaned = str(val).strip().upper()
+    try:
+        return ActivityType(cleaned)
+    except ValueError:
+        return ActivityType.EXPLORE
+
+
 class ActivityUpdate(BaseModel):
     activity_type: ActivityType = Field(
         ...,

@@ -8,12 +8,13 @@ from app.models.post import ActivityPost
 from app.models.profile import Profile
 from app.models.activity import UserActivity
 from app.models.connection import Connection, ConnectionStatus
-from app.schemas.activity import ActivityType
+from app.schemas.activity import ActivityType, safe_parse_activity_type
 from app.schemas.post import PostResponse
 from app.schemas.feed import FeedResponse, FeedPagination
 from app.services.post_service import _build_author_public
 from app.services.discovery_service import _parse_interests
 from app.services.feed_ranker import FeedRanker
+from datetime import datetime, timezone
 
 logger = logging.getLogger("sidequest.services.feed")
 
@@ -57,10 +58,7 @@ class FeedService:
         )
         viewer_activity: Optional[ActivityType] = None
         if viewer_act_record and viewer_act_record.activity_type:
-            try:
-                viewer_activity = ActivityType(viewer_act_record.activity_type)
-            except ValueError:
-                viewer_activity = None
+            viewer_activity = safe_parse_activity_type(viewer_act_record.activity_type)
 
         # 3. Viewer context: Mutual Connections
         accepted_conns = (
@@ -102,13 +100,14 @@ class FeedService:
                 connected_user_ids=connected_user_ids,
                 viewer_interests=viewer_interests,
             )
+            created_dt = post.created_at or datetime.now(timezone.utc)
             scored_items.append(
                 {
                     "post": post,
                     "author_profile": author_prof,
                     "author_id": post.author_id,
                     "score": score,
-                    "created_at": post.created_at,
+                    "created_at": created_dt,
                 }
             )
 
@@ -123,25 +122,29 @@ class FeedService:
         page_slice = diverse_items[offset : offset + limit]
         has_more = (offset + limit) < total_items
 
-        # 10. Assemble response without exposing raw score
-        result_posts = [
-            PostResponse(
-                id=item["post"].id,
-                author_id=item["post"].author_id,
-                activity_type=ActivityType(item["post"].activity_type),
-                content=item["post"].content,
-                media_url=item["post"].media_url,
-                media_type=item["post"].media_type,
-                link_url=item["post"].link_url,
-                link_title=item["post"].link_title,
-                link_description=item["post"].link_description,
-                link_image=item["post"].link_image,
-                author=_build_author_public(item["author_profile"], item["post"].author_id),
-                created_at=item["post"].created_at,
-                updated_at=item["post"].updated_at,
+        # 10. Assemble response safely
+        result_posts = []
+        for item in page_slice:
+            post_obj = item["post"]
+            c_at = post_obj.created_at or datetime.now(timezone.utc)
+            u_at = post_obj.updated_at or c_at
+            result_posts.append(
+                PostResponse(
+                    id=post_obj.id,
+                    author_id=post_obj.author_id,
+                    activity_type=safe_parse_activity_type(post_obj.activity_type),
+                    content=post_obj.content,
+                    media_url=getattr(post_obj, "media_url", None),
+                    media_type=getattr(post_obj, "media_type", None),
+                    link_url=getattr(post_obj, "link_url", None),
+                    link_title=getattr(post_obj, "link_title", None),
+                    link_description=getattr(post_obj, "link_description", None),
+                    link_image=getattr(post_obj, "link_image", None),
+                    author=_build_author_public(item["author_profile"], post_obj.author_id),
+                    created_at=c_at,
+                    updated_at=u_at,
+                )
             )
-            for item in page_slice
-        ]
 
         logger.info(
             "Rendered feed for user %s: %d candidates -> %d ranked items (page size %d)",
