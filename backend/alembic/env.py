@@ -14,6 +14,27 @@ from app.core.config import settings
 from app.db.base import Base
 import app.models  # noqa: F401
 
+from alembic.ddl.impl import DefaultImpl
+from sqlalchemy import Column, String, Table, MetaData, PrimaryKeyConstraint
+
+# Configure Alembic version table to use VARCHAR(255) for version_num
+_orig_version_table_impl = DefaultImpl.version_table_impl
+
+def _custom_version_table_impl(self, *, version_table: str, version_table_schema: str | None, version_table_pk: bool, **kw):
+    vt = Table(
+        version_table,
+        MetaData(),
+        Column("version_num", String(255), nullable=False),
+        schema=version_table_schema,
+    )
+    if version_table_pk:
+        vt.append_constraint(
+            PrimaryKeyConstraint("version_num", name=f"{version_table}_pkc")
+        )
+    return vt
+
+DefaultImpl.version_table_impl = _custom_version_table_impl
+
 config = context.config
 
 if config.config_file_name is not None:
