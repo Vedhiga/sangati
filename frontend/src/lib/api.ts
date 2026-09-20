@@ -32,11 +32,16 @@ async function request<T>(
   const authHeaders = await getAuthHeader();
   const url = `${API_BASE_URL}${endpoint}`;
 
+  const isFormData = options.body instanceof FormData;
+
   const defaultHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
     Accept: "application/json",
     ...authHeaders,
   };
+
+  if (!isFormData) {
+    defaultHeaders["Content-Type"] = "application/json";
+  }
 
   const config: RequestInit = {
     ...options,
@@ -88,14 +93,14 @@ export const api = {
     request<T>(endpoint, {
       ...options,
       method: "POST",
-      body: body ? JSON.stringify(body) : undefined,
+      body: body instanceof FormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
     }),
 
   put: <T>(endpoint: string, body?: unknown, options?: RequestInit) =>
     request<T>(endpoint, {
       ...options,
       method: "PUT",
-      body: body ? JSON.stringify(body) : undefined,
+      body: body instanceof FormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
     }),
 
   delete: <T>(endpoint: string, options?: RequestInit) =>
