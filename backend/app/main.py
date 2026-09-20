@@ -28,11 +28,36 @@ except Exception as e:
     logger.warning("Read-only filesystem detected on startup: %s", e)
 
 
+def ensure_activity_posts_columns():
+    try:
+        from sqlalchemy import inspect, text
+        inspector = inspect(engine)
+        if "activity_posts" not in inspector.get_table_names():
+            return
+        existing_cols = {c["name"] for c in inspector.get_columns("activity_posts")}
+        needed_cols = [
+            ("media_url", "VARCHAR"),
+            ("media_type", "VARCHAR"),
+            ("link_url", "VARCHAR"),
+            ("link_title", "VARCHAR"),
+            ("link_description", "VARCHAR"),
+            ("link_image", "VARCHAR"),
+        ]
+        with engine.begin() as conn:
+            for col_name, col_type in needed_cols:
+                if col_name not in existing_cols:
+                    conn.execute(text(f"ALTER TABLE activity_posts ADD COLUMN {col_name} {col_type}"))
+                    logger.info("Added missing column '%s' to activity_posts table.", col_name)
+    except Exception as e:
+        logger.warning("Could not auto-verify activity_posts columns on startup: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up Sangati API in %s mode...", settings.ENVIRONMENT)
     try:
         Base.metadata.create_all(bind=engine)
+        ensure_activity_posts_columns()
         logger.info("Database schema verified.")
     except Exception as e:
         logger.warning("Could not auto-create database tables on startup: %s", e)
