@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface LiquidMetalCanvasProps {
   className?: string;
@@ -8,12 +8,23 @@ interface LiquidMetalCanvasProps {
 
 export function LiquidMetalCanvas({ className = "" }: LiquidMetalCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    // Detect prefers-reduced-motion
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const gl = canvas.getContext("webgl");
+    const gl = canvas.getContext("webgl", { alpha: true, antialias: true });
     if (!gl) return;
 
     // Vertex Shader Source
@@ -26,7 +37,7 @@ export function LiquidMetalCanvas({ className = "" }: LiquidMetalCanvasProps) {
       }
     `;
 
-    // Fragment Shader Source (Raymarched Liquid Chrome / Molten Metal Blob)
+    // Fragment Shader Source (Raymarched Organic Liquid Chrome Sculpture)
     const fsSource = `
       precision highp float;
       varying vec2 vUv;
@@ -35,7 +46,7 @@ export function LiquidMetalCanvas({ className = "" }: LiquidMetalCanvasProps) {
       uniform vec2 uMouse;
       uniform float uScroll;
 
-      // 3D Noise functions
+      // 3D Simplex-like Noise Generator
       vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
       vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
       vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -101,39 +112,42 @@ export function LiquidMetalCanvas({ className = "" }: LiquidMetalCanvasProps) {
         return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
       }
 
-      // Smooth minimum for organic blob merging
+      // Smooth minimum for liquid metaball blending
       float smin(float a, float b, float k) {
         float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
         return mix(b, a, h) - k * h * (1.0 - h);
       }
 
-      // Signed Distance Field of Liquid Chrome Object
+      // 3D Molten Sculpture Signed Distance Function
       float map(vec3 p) {
-        float time = uTime * 0.4;
-        vec2 m = uMouse * 0.8;
-        
-        // Base liquid sphere
+        float time = uTime * 0.25;
+        vec2 m = uMouse * 0.5;
+
+        // Primary morphing liquid body
         vec3 p1 = p;
-        p1.x -= m.x * 0.4;
-        p1.y -= m.y * 0.4 + uScroll * 0.3;
-        
-        float d1 = length(p1) - 1.25;
+        p1.x -= m.x * 0.3;
+        p1.y -= m.y * 0.3 + uScroll * 0.2;
 
-        // Dynamic fluid morphing noise
-        float noise = snoise(p * 1.5 + vec3(time * 0.5, time * 0.3, time * 0.4));
-        d1 += noise * 0.35;
+        float sphere1 = length(p1) - 1.15;
+        float n1 = snoise(p1 * 1.4 + vec3(time * 0.4, time * 0.2, time * 0.3));
+        sphere1 += n1 * 0.38;
 
-        // Secondary smaller fluid orb
-        vec3 p2 = p - vec3(sin(time * 0.7) * 0.6, cos(time * 0.5) * 0.5, sin(time * 0.3) * 0.4);
-        float d2 = length(p2) - 0.65;
-        d2 += snoise(p2 * 2.0 - vec3(time)) * 0.2;
+        // Secondary fluid lobe
+        vec3 p2 = p - vec3(sin(time * 0.5) * 0.55, cos(time * 0.4) * 0.45, sin(time * 0.3) * 0.35);
+        float sphere2 = length(p2) - 0.7;
+        float n2 = snoise(p2 * 2.1 - vec3(time * 0.6));
+        sphere2 += n2 * 0.22;
 
-        return smin(d1, d2, 0.6);
+        // Tertiary small fluid droplet
+        vec3 p3 = p + vec3(cos(time * 0.6) * 0.65, sin(time * 0.5) * 0.55, cos(time * 0.4) * 0.45);
+        float sphere3 = length(p3) - 0.45;
+
+        return smin(smin(sphere1, sphere2, 0.55), sphere3, 0.45);
       }
 
-      // Calculate Normal
+      // Compute Surface Normal
       vec3 calcNormal(vec3 p) {
-        vec2 e = vec2(0.002, 0.0);
+        vec2 e = vec2(0.0015, 0.0);
         return normalize(vec3(
           map(p + e.xyy) - map(p - e.xyy),
           map(p + e.yxy) - map(p - e.yxy),
@@ -144,60 +158,60 @@ export function LiquidMetalCanvas({ className = "" }: LiquidMetalCanvasProps) {
       void main() {
         vec2 st = (gl_FragCoord.xy - 0.5 * uResolution.xy) / min(uResolution.x, uResolution.y);
 
-        // Ray setup
-        vec3 ro = vec3(0.0, 0.0, 3.2);
-        vec3 rd = normalize(vec3(st, -1.5));
+        // Camera setup
+        vec3 ro = vec3(0.0, 0.0, 3.1);
+        vec3 rd = normalize(vec3(st, -1.6));
 
         float t = 0.0;
         float d = 0.0;
-        for (int i = 0; i < 64; i++) {
+        for (int i = 0; i < 72; i++) {
           vec3 p = ro + rd * t;
           d = map(p);
-          if (d < 0.001 || t > 8.0) break;
+          if (d < 0.001 || t > 7.5) break;
           t += d;
         }
 
-        vec3 color = vec3(0.0); // Transparent / Dark background
+        vec4 finalColor = vec4(0.0);
 
         if (d < 0.01) {
           vec3 p = ro + rd * t;
           vec3 n = calcNormal(p);
           vec3 viewDir = normalize(-rd);
 
-          // Studio Lighting Setup (Dark Chrome Reflective Environment)
-          vec3 lightDir1 = normalize(vec3(1.5, 2.0, 2.0));
-          vec3 lightDir2 = normalize(vec3(-2.0, -1.0, 1.5));
-          vec3 lightDir3 = normalize(vec3(0.0, -2.5, -1.0));
+          // Studio Dark Chrome Environment Lighting
+          vec3 keyLight = normalize(vec3(1.8, 2.2, 2.5));
+          vec3 fillLight = normalize(vec3(-2.2, -1.2, 1.8));
+          vec3 rimLight = normalize(vec3(0.0, -3.0, -1.5));
 
-          // Specular Highlights
-          float spec1 = pow(max(dot(reflect(-lightDir1, n), viewDir), 0.0), 32.0);
-          float spec2 = pow(max(dot(reflect(-lightDir2, n), viewDir), 0.0), 16.0);
-          
-          // Fresnel Reflection Edge
-          float fresnel = pow(1.0 - max(dot(n, viewDir), 0.0), 3.5);
+          // Specular highlights
+          float specKey = pow(max(dot(reflect(-keyLight, n), viewDir), 0.0), 48.0);
+          float specFill = pow(max(dot(reflect(-fillLight, n), viewDir), 0.0), 24.0);
 
-          // Chrome Base Gradient
-          vec3 chromeBase = mix(vec3(0.04, 0.04, 0.06), vec3(0.85, 0.88, 0.92), fresnel);
-          
-          // Environment metallic reflection lines
-          float env = sin(n.x * 6.0 + n.y * 6.0 + uTime * 0.2) * 0.5 + 0.5;
-          chromeBase += vec3(0.3, 0.32, 0.35) * pow(env, 3.0);
+          // Fresnel Rim Lighting
+          float fresnel = pow(1.0 - max(dot(n, viewDir), 0.0), 4.0);
 
-          // Silver Highlights & Dark Charcoal Shadowing
-          color = chromeBase;
-          color += vec3(0.95, 0.97, 1.0) * spec1 * 1.4;
-          color += vec3(0.4, 0.45, 0.5) * spec2 * 0.8;
-          color += vec3(0.9, 0.92, 0.95) * fresnel * 0.6;
+          // Dark Chrome Metallic Reflection Shading
+          vec3 metallicBase = mix(vec3(0.05, 0.05, 0.07), vec3(0.92, 0.94, 0.98), fresnel);
 
-          // Subtle ambient glow
-          color = mix(color, vec3(0.06, 0.06, 0.08), 0.15);
+          // High-grade metallic reflection curves
+          float env = sin(n.x * 7.0 + n.y * 7.0 + uTime * 0.15) * 0.5 + 0.5;
+          metallicBase += vec3(0.35, 0.38, 0.42) * pow(env, 3.5);
+
+          vec3 color = metallicBase;
+          color += vec3(1.0, 1.0, 1.0) * specKey * 1.6;
+          color += vec3(0.5, 0.55, 0.6) * specFill * 0.9;
+          color += vec3(0.95, 0.97, 1.0) * fresnel * 0.7;
+
+          // Soft edge alpha falloff for seamless background integration
+          float alpha = clamp((1.0 - fresnel * 0.1), 0.92, 1.0);
+          finalColor = vec4(color, alpha);
         }
 
-        gl_FragColor = vec4(color, d < 0.01 ? 0.95 : 0.0);
+        gl_FragColor = finalColor;
       }
     `;
 
-    // Compile Shader Helper
+    // Compile helper
     const createShader = (type: number, source: string) => {
       const shader = gl.createShader(type);
       if (!shader) return null;
@@ -224,7 +238,6 @@ export function LiquidMetalCanvas({ className = "" }: LiquidMetalCanvasProps) {
 
     gl.useProgram(program);
 
-    // Quad Geometry
     const positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.bufferData(
@@ -237,7 +250,6 @@ export function LiquidMetalCanvas({ className = "" }: LiquidMetalCanvasProps) {
     gl.enableVertexAttribArray(aPosition);
     gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
 
-    // Uniform locations
     const uResolution = gl.getUniformLocation(program, "uResolution");
     const uTime = gl.getUniformLocation(program, "uTime");
     const uMouse = gl.getUniformLocation(program, "uMouse");
@@ -277,12 +289,11 @@ export function LiquidMetalCanvas({ className = "" }: LiquidMetalCanvasProps) {
     const render = () => {
       resize();
 
-      // Smooth lerp mouse & scroll
-      mouse.x += (mouse.targetX - mouse.x) * 0.05;
-      mouse.y += (mouse.targetY - mouse.y) * 0.05;
-      scroll.y += (scroll.targetY - scroll.y) * 0.05;
+      mouse.x += (mouse.targetX - mouse.x) * 0.04;
+      mouse.y += (mouse.targetY - mouse.y) * 0.04;
+      scroll.y += (scroll.targetY - scroll.y) * 0.04;
 
-      const currentTime = (performance.now() - startTime) / 1000;
+      const currentTime = prefersReducedMotion ? 10.0 : (performance.now() - startTime) / 1000;
 
       gl.uniform2f(uResolution, canvas.width, canvas.height);
       gl.uniform1f(uTime, currentTime);
@@ -293,7 +304,9 @@ export function LiquidMetalCanvas({ className = "" }: LiquidMetalCanvasProps) {
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-      animationFrameId = requestAnimationFrame(render);
+      if (!prefersReducedMotion) {
+        animationFrameId = requestAnimationFrame(render);
+      }
     };
 
     render();
@@ -303,15 +316,15 @@ export function LiquidMetalCanvas({ className = "" }: LiquidMetalCanvasProps) {
       window.removeEventListener("scroll", handleScroll);
       cancelAnimationFrame(animationFrameId);
     };
-  }, []);
+  }, [prefersReducedMotion]);
 
   return (
-    <div className={`relative w-full h-full min-h-[350px] sm:min-h-[450px] flex items-center justify-center overflow-hidden ${className}`}>
-      {/* Background radial glow behind liquid chrome */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.03] via-transparent to-slate-400/[0.04] rounded-3xl pointer-events-none" />
+    <div className={`relative w-full h-full min-h-[380px] sm:min-h-[480px] flex items-center justify-center ${className}`}>
+      {/* Ambient soft glow background behind liquid sculpture */}
+      <div className="absolute inset-0 bg-radial-glow pointer-events-none" />
       <canvas
         ref={canvasRef}
-        className="w-full h-full max-w-[500px] max-h-[500px] object-contain cursor-grab active:cursor-grabbing"
+        className="w-full h-full max-w-[550px] max-h-[550px] object-contain cursor-grab active:cursor-grabbing relative z-10"
       />
     </div>
   );

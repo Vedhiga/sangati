@@ -11,7 +11,6 @@ import {
   Users,
   Layers,
   CheckCircle2,
-  Compass,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -27,21 +26,21 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="w-full space-y-24 py-6 relative z-10">
+    <div className="w-full space-y-24 py-4 relative z-10">
       {/* SECTION 1: Asymmetric Motion-First Editorial Hero */}
-      <section className="relative grid grid-cols-1 lg:grid-cols-12 gap-12 items-center pt-6 pb-12">
-        {/* Left Column: Asymmetric Editorial Stack */}
+      <section className="relative grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center pt-4 pb-8">
+        {/* Left Column: Editorial Display Typography Stack */}
         <div className="lg:col-span-7 space-y-8 animate-fade-in-up">
           {/* Section Label */}
-          <div className="flex items-center gap-3 text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase">
+          <div className="flex items-center gap-3 text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase select-none">
             <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping" />
-            <span>01 / COMMUNITY ETHOS</span>
+            <span>01 / SANGATI DIGITAL ETHOS</span>
           </div>
 
-          {/* Display Heading with Weight Contrast */}
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-light tracking-tight text-[#F5F5F3] leading-[1.08]">
+          {/* Display Heading with Refined Editorial Weight & Italic Treatment */}
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-light tracking-tight text-[#F5F5F3] leading-[1.06]">
             Discover people who think{" "}
-            <span className="font-semibold italic text-white underline decoration-white/20 underline-offset-8">
+            <span className="font-serif italic font-normal text-white underline decoration-white/20 underline-offset-[12px] inline-block">
               differently.
             </span>
           </h1>
@@ -52,7 +51,7 @@ export default function HomePage() {
           </p>
 
           {/* Hero CTAs */}
-          <div className="flex flex-wrap items-center gap-4 pt-4">
+          <div className="flex flex-wrap items-center gap-4 pt-2">
             {isAuthenticated ? (
               <>
                 <Link href="/feed">
@@ -100,9 +99,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Right Column: Interactive Liquid Metal 3D Canvas */}
+        {/* Right Column: Floating Unconstrained 3D Liquid Metal Sculpture */}
         <div className="lg:col-span-5 relative flex items-center justify-center animate-fade-in-up delay-300">
-          <LiquidMetalCanvas className="rounded-3xl border border-white/[0.06] bg-sangati-glass" />
+          <LiquidMetalCanvas className="w-full h-full" />
         </div>
       </section>
 
@@ -111,7 +110,7 @@ export default function HomePage() {
 
       {/* SECTION 2: Architecture Pipeline */}
       <section className="space-y-8 animate-fade-in-up delay-200">
-        <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
+        <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
           <span className="text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase">
             02 / PLATFORM ARCHITECTURE
           </span>
@@ -127,7 +126,7 @@ export default function HomePage() {
           ].map((item, i) => (
             <div
               key={i}
-              className="p-6 rounded-2xl bg-sangati-card border border-white/[0.08] hover:border-white/20 transition-all duration-300 space-y-3 group"
+              className="p-6 rounded-2xl bg-sangati-glass border border-white/[0.08] hover:border-white/20 transition-all duration-300 space-y-3 group"
             >
               <span className="text-[11px] font-mono text-[#8A8A8A] block tracking-widest">{item.step}</span>
               <h3 className="text-sm font-medium text-[#F5F5F3] group-hover:text-white transition-colors">{item.title}</h3>
@@ -142,7 +141,7 @@ export default function HomePage() {
 
       {/* SECTION 3: Active Intent Matrices */}
       <section className="space-y-8 animate-fade-in-up delay-300">
-        <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
+        <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
           <span className="text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase">
             03 / INTENT MATRICES
           </span>
@@ -158,7 +157,7 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <Link href={isAuthenticated ? "/activity" : "/signup"} className="block group">
-            <div className="p-8 rounded-2xl bg-sangati-card border border-white/[0.08] hover:border-white/25 transition-all duration-300 space-y-4">
+            <div className="p-8 rounded-2xl bg-sangati-glass border border-white/[0.08] hover:border-white/25 transition-all duration-300 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="h-10 w-10 rounded-xl bg-white/[0.04] border border-white/10 text-[#F5F5F3] flex items-center justify-center">
                   <Hammer className="h-5 w-5" />
@@ -179,7 +178,7 @@ export default function HomePage() {
           </Link>
 
           <Link href={isAuthenticated ? "/activity" : "/signup"} className="block group">
-            <div className="p-8 rounded-2xl bg-sangati-card border border-white/[0.08] hover:border-white/25 transition-all duration-300 space-y-4">
+            <div className="p-8 rounded-2xl bg-sangati-glass border border-white/[0.08] hover:border-white/25 transition-all duration-300 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="h-10 w-10 rounded-xl bg-white/[0.04] border border-white/10 text-[#F5F5F3] flex items-center justify-center">
                   <Brain className="h-5 w-5" />
@@ -200,7 +199,7 @@ export default function HomePage() {
           </Link>
 
           <Link href={isAuthenticated ? "/activity" : "/signup"} className="block group">
-            <div className="p-8 rounded-2xl bg-sangati-card border border-white/[0.08] hover:border-white/25 transition-all duration-300 space-y-4">
+            <div className="p-8 rounded-2xl bg-sangati-glass border border-white/[0.08] hover:border-white/25 transition-all duration-300 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="h-10 w-10 rounded-xl bg-white/[0.04] border border-white/10 text-[#F5F5F3] flex items-center justify-center">
                   <MessageSquare className="h-5 w-5" />
@@ -221,7 +220,7 @@ export default function HomePage() {
           </Link>
 
           <Link href={isAuthenticated ? "/activity" : "/signup"} className="block group">
-            <div className="p-8 rounded-2xl bg-sangati-card border border-white/[0.08] hover:border-white/25 transition-all duration-300 space-y-4">
+            <div className="p-8 rounded-2xl bg-sangati-glass border border-white/[0.08] hover:border-white/25 transition-all duration-300 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="h-10 w-10 rounded-xl bg-white/[0.04] border border-white/10 text-[#F5F5F3] flex items-center justify-center">
                   <Sparkles className="h-5 w-5" />
@@ -244,7 +243,7 @@ export default function HomePage() {
       </section>
 
       {/* SECTION 4: Transparent Feed Principles */}
-      <section className="p-8 sm:p-12 rounded-3xl bg-sangati-card border border-white/[0.08] space-y-8 animate-fade-in-up delay-400">
+      <section className="p-8 sm:p-12 rounded-3xl bg-sangati-glass border border-white/[0.08] space-y-8 animate-fade-in-up delay-400">
         <div className="space-y-2">
           <span className="text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase">
             04 / TRANSPARENT RANKING GUARANTEE
