@@ -22,6 +22,9 @@ const config: Config = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        canvas: "#040407",
+        surface: "#0a0b12",
+        "surface-border": "rgba(255, 255, 255, 0.08)",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -50,12 +53,11 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Activity identities (restrained dark palette accents)
         activity: {
-          build: "#f97316", // Warm Orange
-          learn: "#3b82f6", // Muted Blue
-          convo: "#8b5cf6", // Subtle Violet
-          explore: "#f59e0b", // Muted Amber
+          build: "#f97316",
+          learn: "#3b82f6",
+          convo: "#8b5cf6",
+          explore: "#f59e0b",
         },
       },
       borderRadius: {

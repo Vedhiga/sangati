@@ -10,11 +10,11 @@ import {
   MessageSquare,
   Compass,
   Users,
-  PenSquare,
   Loader2,
   AlertCircle,
   Inbox,
   Filter,
+  Layers,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { api, ApiClientError } from "@/lib/api";
@@ -177,19 +177,19 @@ export default function FeedPage() {
   const ActiveIcon = activeMeta?.icon;
 
   return (
-    <div className="w-full space-y-6 sm:space-y-8 py-2">
+    <div className="w-full space-y-6 sm:space-y-8 py-2 animate-fade-in-up">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">
-            <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-            <span>Community Stream</span>
+          <div className="flex items-center gap-2 text-slate-400 font-mono font-semibold text-[10px] uppercase tracking-widest">
+            <Layers className="h-3.5 w-3.5 text-white" />
+            <span>01 // PERSONAL STREAM</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">
-            Feed
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+            Community Feed
           </h1>
-          <p className="text-xs text-slate-400">
-            Updates tailored to your active intent and connections.
+          <p className="text-xs text-slate-400 leading-relaxed font-normal">
+            Real updates ranked by your active intent, mutual connections, and shared curiosities.
           </p>
         </div>
       </div>
@@ -203,12 +203,12 @@ export default function FeedPage() {
       )}
 
       {/* Activity Context Switcher Bar */}
-      <div className="rounded-xl border border-white/10 bg-sangati-glass p-4 space-y-3">
+      <div className="rounded-2xl border border-white/[0.08] bg-sangati-glass p-4 space-y-3 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-3">
             {activeMeta && ActiveIcon ? (
               <>
-                <div className={`h-7 w-7 rounded-lg border ${activeMeta.badgeBg} flex items-center justify-center shrink-0`}>
+                <div className={`h-7 w-7 rounded-xl border ${activeMeta.badgeBg} flex items-center justify-center shrink-0`}>
                   <ActiveIcon className={`h-3.5 w-3.5 ${activeMeta.accentColor}`} />
                 </div>
                 <div className="text-xs">
@@ -216,20 +216,20 @@ export default function FeedPage() {
                   <span className="font-semibold text-slate-200">
                     {activeMeta.label}
                   </span>
-                  <span className="text-slate-500 text-[11px] block sm:inline sm:ml-2">
+                  <span className="text-slate-400 text-[11px] block sm:inline sm:ml-2">
                     (matching posts ranked higher)
                   </span>
                 </div>
               </>
             ) : (
               <>
-                <div className="h-7 w-7 rounded-lg bg-white/5 border border-white/10 text-slate-400 flex items-center justify-center shrink-0">
+                <div className="h-7 w-7 rounded-xl bg-white/5 border border-white/10 text-slate-400 flex items-center justify-center shrink-0">
                   <Compass className="h-3.5 w-3.5" />
                 </div>
                 <div className="text-xs">
                   <span className="text-slate-400">No active intent set. </span>
                   <span className="text-slate-200 font-medium text-xs">
-                    Select what you&apos;re up to to tailor your feed.
+                    Select what you&apos;re up to tailor your feed.
                   </span>
                 </div>
               </>
@@ -237,17 +237,17 @@ export default function FeedPage() {
           </div>
 
           <Link href="/activity" className="shrink-0 self-start sm:self-auto">
-            <span className="text-xs text-slate-400 hover:text-white transition-colors cursor-pointer">
+            <span className="text-xs text-slate-400 hover:text-white transition-colors cursor-pointer font-mono">
               Change intent →
             </span>
           </Link>
         </div>
 
         {/* Quick inline activity switcher */}
-        <div className="pt-2 border-t border-white/10 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-medium text-slate-500 mr-1 flex items-center gap-1">
+        <div className="pt-2 border-t border-white/[0.06] flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] font-mono font-medium text-slate-400 mr-1 flex items-center gap-1">
             <Filter className="h-3 w-3" />
-            Switch intent:
+            Switch:
           </span>
           {(Object.keys(ACTIVITIES) as ActivityType[]).map((type) => {
             const meta = ACTIVITIES[type];
@@ -260,9 +260,9 @@ export default function FeedPage() {
                 type="button"
                 disabled={isUpdatingActivity}
                 onClick={() => handleActivityChange(type)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-all duration-150 ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all duration-200 ${
                   isSelected
-                    ? "bg-white text-black border-white font-semibold"
+                    ? "bg-white text-black border-white font-semibold shadow-sm"
                     : "border-white/10 bg-white/5 text-slate-400 hover:text-slate-200 hover:bg-white/10"
                 }`}
               >
@@ -276,7 +276,7 @@ export default function FeedPage() {
 
       {/* Error state */}
       {error && (
-        <Alert variant="destructive" className="bg-rose-500/10 text-rose-300 border-rose-500/20">
+        <Alert variant="destructive" className="bg-rose-500/10 text-rose-300 border-rose-500/20 rounded-xl">
           <AlertCircle className="h-4 w-4 text-rose-400" />
           <AlertDescription className="flex items-center justify-between w-full">
             <span>{error}</span>
@@ -284,7 +284,7 @@ export default function FeedPage() {
               variant="outline"
               size="sm"
               onClick={() => loadFeed(0, true)}
-              className="ml-4 h-7 text-xs border-white/15 bg-white/5"
+              className="ml-4 h-7 text-xs border-white/15 bg-white/5 rounded-lg"
             >
               Retry
             </Button>
@@ -296,7 +296,7 @@ export default function FeedPage() {
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(4)].map((_, i) => (
-            <Card key={i} className="border border-white/10 bg-sangati-glass p-4 sm:p-5 space-y-3">
+            <Card key={i} className="border border-white/[0.08] bg-sangati-glass p-5 space-y-3 rounded-2xl">
               <div className="flex items-center gap-3">
                 <Skeleton className="h-9 w-9 rounded-full bg-white/5 shrink-0" />
                 <div className="space-y-1.5 flex-1">
@@ -304,13 +304,13 @@ export default function FeedPage() {
                   <Skeleton className="h-3 w-1/4 bg-white/5" />
                 </div>
               </div>
-              <Skeleton className="h-14 w-full bg-white/5 rounded-lg" />
+              <Skeleton className="h-14 w-full bg-white/5 rounded-xl" />
             </Card>
           ))}
         </div>
       ) : posts.length === 0 ? (
         /* Empty State */
-        <div className="text-center py-16 px-4 border border-dashed border-white/10 rounded-xl bg-sangati-glass max-w-md mx-auto space-y-4">
+        <div className="text-center py-16 px-4 border border-dashed border-white/10 rounded-2xl bg-sangati-glass max-w-md mx-auto space-y-4 shadow-2xl">
           <div className="h-10 w-10 rounded-full bg-white/5 border border-white/10 text-slate-400 flex items-center justify-center mx-auto">
             <Inbox className="h-5 w-5" />
           </div>
@@ -324,7 +324,7 @@ export default function FeedPage() {
           </div>
           <div className="flex items-center justify-center gap-2 pt-2">
             <Link href="/discover">
-              <Button size="sm" variant="outline" className="text-xs gap-1.5 border-white/15 bg-white/5 text-slate-200">
+              <Button size="sm" variant="outline" className="text-xs gap-1.5 border-white/15 bg-white/5 text-slate-200 rounded-xl">
                 <Users className="h-3.5 w-3.5" />
                 <span>Discover people</span>
               </Button>
@@ -352,7 +352,7 @@ export default function FeedPage() {
                 size="sm"
                 onClick={handleLoadMore}
                 disabled={isLoadingMore}
-                className="text-xs px-6 h-8 gap-1.5 border-white/15 bg-white/5 text-slate-200 hover:bg-white/10"
+                className="text-xs px-6 h-8 gap-1.5 border-white/15 bg-white/5 text-slate-200 hover:bg-white/10 rounded-xl"
               >
                 {isLoadingMore && <Loader2 className="h-3 w-3 animate-spin" />}
                 <span>{isLoadingMore ? "Loading..." : "Load more updates"}</span>
@@ -364,4 +364,3 @@ export default function FeedPage() {
     </div>
   );
 }
-
