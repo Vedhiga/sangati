@@ -211,3 +211,31 @@ def test_personalized_feed_api_integration(client, test_user_id, test_user_2_id)
     assert res_paged_2.status_code == 200
     paged_data_2 = res_paged_2.json()
     assert len(paged_data_2["posts"]) >= 1
+
+
+def test_own_posts_included_in_feed(client, test_user_id):
+    token = create_mock_jwt(test_user_id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    client.post(
+        "/api/v1/profile",
+        json={"username": "self_author", "display_name": "Self Author"},
+        headers=headers,
+    )
+
+    # Create a post as self
+    res_post = client.post(
+        "/api/v1/posts",
+        json={"activity_type": "BUILD", "content": "My own new post content"},
+        headers=headers,
+    )
+    assert res_post.status_code == 201
+    my_post_id = res_post.json()["id"]
+
+    # Retrieve feed
+    res_feed = client.get("/api/v1/feed", headers=headers)
+    assert res_feed.status_code == 200
+    posts = res_feed.json()["posts"]
+    feed_post_ids = [p["id"] for p in posts]
+    assert my_post_id in feed_post_ids
+

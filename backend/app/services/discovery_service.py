@@ -63,12 +63,31 @@ class DiscoveryService:
             )
         )
 
-        # 2. Query candidates excluding current user
+        # 1.5 Exclude users already connected (ACCEPTED status in either direction)
+        from app.models.connection import Connection, ConnectionStatus
+        from sqlalchemy import or_
+
+        accepted_conns = (
+            db.query(Connection)
+            .filter(
+                or_(Connection.requester_id == current_user_id, Connection.receiver_id == current_user_id),
+                Connection.status == ConnectionStatus.ACCEPTED.value,
+            )
+            .all()
+        )
+        connected_user_ids = {
+            c.receiver_id if c.requester_id == current_user_id else c.requester_id
+            for c in accepted_conns
+        }
+
+        # 2. Query candidates excluding current user and already connected users
         query = (
             db.query(Profile, UserActivity.activity_type)
             .outerjoin(UserActivity, Profile.user_id == UserActivity.user_id)
             .filter(Profile.user_id != current_user_id)
         )
+        if connected_user_ids:
+            query = query.filter(Profile.user_id.notin_(connected_user_ids))
 
         # 3. Apply activity filter if provided and not ALL
         normalized_filter = activity_filter.strip().upper() if activity_filter else None

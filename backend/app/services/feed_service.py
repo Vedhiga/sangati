@@ -27,11 +27,10 @@ class FeedService:
     ) -> List[ActivityPost]:
         """
         Retrieves a candidate pool of recent posts from the community,
-        excluding the viewer's own posts.
+        including the viewer's own posts.
         """
         return (
             db.query(ActivityPost)
-            .filter(ActivityPost.author_id != viewer_id)
             .order_by(ActivityPost.created_at.desc())
             .limit(candidate_limit)
             .all()

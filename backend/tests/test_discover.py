@@ -237,8 +237,8 @@ def test_discover_includes_connection_status(client, test_user_id, test_user_2_i
     # Target accepts
     client.put(f"/api/v1/connections/{conn_id}/accept", headers=headers2)
 
-    # Now both see CONNECTED
+    # Once connected, connected users are excluded from discover recommendations
     res4 = client.get("/api/v1/discover", headers=headers1)
-    p4 = [p for p in res4.json()["people"] if p["username"] == "target_conn"][0]
-    assert p4["connection_status"] == "CONNECTED"
+    connected_people = [p for p in res4.json()["people"] if p["username"] == "target_conn"]
+    assert len(connected_people) == 0
 
