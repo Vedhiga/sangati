@@ -149,3 +149,37 @@ def send_message(
         current_user_id=current_user.id,
         data=data,
     )
+
+
+@router.get(
+    "/unread-count",
+    summary="Get count of unread messages for the current user",
+)
+def get_unread_count(
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Returns unread messages notification count for the current user.
+    """
+    count = ConversationService.get_unread_count(db=db, current_user_id=current_user.id)
+    return {"count": count}
+
+
+@router.put(
+    "/{conversation_id}/read",
+    summary="Mark messages in a conversation as read",
+)
+def mark_conversation_read(
+    conversation_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Marks all NEW_MESSAGE notifications associated with this conversation as read.
+    """
+    ConversationService.mark_conversation_read(
+        db=db, conversation_id=conversation_id, current_user_id=current_user.id
+    )
+    return {"status": "ok"}
+

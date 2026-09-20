@@ -1,12 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Hammer, Brain, MessageSquare, Sparkles, Send, Loader2 } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Hammer,
+  Brain,
+  MessageSquare,
+  Sparkles,
+  Send,
+  Loader2,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  Video as VideoIcon,
+  X,
+  Globe,
+} from "lucide-react";
 import { ActivityType, Post } from "@/types";
 import { api, ApiClientError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 interface PostComposerProps {
   defaultActivity?: ActivityType | null;
@@ -28,8 +41,8 @@ const ACTIVITIES: ActivityMeta[] = [
     label: "Build",
     icon: Hammer,
     prompt: "Share what you're building, coding, or designing...",
-    accentClass: "text-orange-400",
-    activeClass: "bg-orange-500/15 text-orange-400 border-orange-500/30",
+    accentClass: "text-amber-400",
+    activeClass: "bg-white/10 text-white border-white/20",
   },
   {
     type: "LEARN",
@@ -37,7 +50,7 @@ const ACTIVITIES: ActivityMeta[] = [
     icon: Brain,
     prompt: "What insightful concept or skill did you learn today?",
     accentClass: "text-blue-400",
-    activeClass: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+    activeClass: "bg-white/10 text-white border-white/20",
   },
   {
     type: "CONVERSATION",
@@ -45,15 +58,15 @@ const ACTIVITIES: ActivityMeta[] = [
     icon: MessageSquare,
     prompt: "Start an open, thoughtful discussion...",
     accentClass: "text-violet-400",
-    activeClass: "bg-violet-500/15 text-violet-400 border-violet-500/30",
+    activeClass: "bg-white/10 text-white border-white/20",
   },
   {
     type: "EXPLORE",
     label: "Explore",
     icon: Sparkles,
     prompt: "What new tools, topics, or ideas are you exploring?",
-    accentClass: "text-amber-400",
-    activeClass: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+    accentClass: "text-[#F5F5F3]",
+    activeClass: "bg-white/10 text-white border-white/20",
   },
 ];
 
@@ -65,6 +78,26 @@ export function PostComposer({ defaultActivity, onPostCreated }: PostComposerPro
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Attachment states
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkUrlInput, setLinkUrlInput] = useState("");
+  const [isFetchingLink, setIsFetchingLink] = useState(false);
+  const [linkAttachment, setLinkAttachment] = useState<{
+    url: string;
+    title?: string | null;
+    description?: string | null;
+    image?: string | null;
+  } | null>(null);
+
+  const [mediaAttachment, setMediaAttachment] = useState<{
+    url: string;
+    type: "image" | "video";
+    previewUrl?: string;
+  } | null>(null);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     if (defaultActivity) {
       setSelectedActivity(defaultActivity);
@@ -75,7 +108,82 @@ export function PostComposer({ defaultActivity, onPostCreated }: PostComposerPro
   const ActiveIcon = activeMeta.icon;
   const charsLeft = MAX_CHARS - content.length;
   const isOverLimit = charsLeft < 0;
-  const isPostDisabled = !content.trim() || isOverLimit || isSubmitting;
+  const isPostDisabled =
+    (!content.trim() && !mediaAttachment && !linkAttachment) ||
+    isOverLimit ||
+    isSubmitting ||
+    isUploadingMedia;
+
+  // Handle Link Fetching
+  const handleAddLink = async () => {
+    if (!linkUrlInput.trim()) return;
+    setIsFetchingLink(true);
+    setError(null);
+    try {
+      const res = await api.post<{
+        url: string;
+        title?: string;
+        description?: string;
+        image?: string;
+      }>("/api/v1/media/link-preview", { url: linkUrlInput.trim() });
+      setLinkAttachment(res);
+      setShowLinkInput(false);
+      setLinkUrlInput("");
+    } catch {
+      setLinkAttachment({ url: linkUrlInput.trim(), title: linkUrlInput.trim() });
+      setShowLinkInput(false);
+      setLinkUrlInput("");
+    } finally {
+      setIsFetchingLink(false);
+    }
+  };
+
+  // Handle File Upload (Image / Video)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
+
+    if (!isImage && !isVideo) {
+      setError("Please select a valid image (JPEG, PNG, GIF, WebP) or video (MP4, WebM) file.");
+      return;
+    }
+
+    if (isImage && file.size > 10 * 1024 * 1024) {
+      setError("Image file size exceeds maximum limit of 10MB.");
+      return;
+    }
+
+    if (isVideo && file.size > 50 * 1024 * 1024) {
+      setError("Video file size exceeds maximum limit of 50MB.");
+      return;
+    }
+
+    setIsUploadingMedia(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      // Local API upload
+      const res = await api.post<{ media_url: string; media_type: string }>("/api/v1/media/upload", formData);
+
+      setMediaAttachment({
+        url: res.media_url,
+        type: res.media_type as "image" | "video",
+        previewUrl: URL.createObjectURL(file),
+      });
+    } catch (err) {
+      console.error("Upload error:", err);
+      setError("Failed to upload file. Please try again.");
+    } finally {
+      setIsUploadingMedia(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,8 +196,19 @@ export function PostComposer({ defaultActivity, onPostCreated }: PostComposerPro
       const newPost = await api.post<Post>("/api/v1/posts", {
         activity_type: selectedActivity,
         content: content.trim(),
+        media_url: mediaAttachment?.url || null,
+        media_type: mediaAttachment?.type || null,
+        link_url: linkAttachment?.url || null,
+        link_title: linkAttachment?.title || null,
+        link_description: linkAttachment?.description || null,
+        link_image: linkAttachment?.image || null,
       });
+
+      // Clear state
       setContent("");
+      setMediaAttachment(null);
+      setLinkAttachment(null);
+      setShowLinkInput(false);
       onPostCreated(newPost);
     } catch (err) {
       if (err instanceof ApiClientError) {
@@ -103,25 +222,21 @@ export function PostComposer({ defaultActivity, onPostCreated }: PostComposerPro
   };
 
   return (
-    <Card className="border border-white/10 bg-sangati-glass rounded-xl overflow-hidden shadow-none">
-      <CardContent className="p-4 sm:p-5 space-y-4">
+    <Card className="border border-white/[0.08] bg-sangati-glass rounded-2xl overflow-hidden shadow-2xl">
+      <CardContent className="p-5 space-y-4">
         {/* Composer Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-0.5">
-            <h2 className="text-sm font-semibold text-slate-100 tracking-tight flex items-center gap-2">
-              <span>Share what you&apos;re doing</span>
+            <h2 className="text-sm font-semibold text-[#F5F5F3] tracking-tight">
+              Share what you&apos;re doing
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-[#8A8A8A]">
               Post your updates, learnings, or open questions to the community.
             </p>
           </div>
 
-          {/* Activity selector pills */}
-          <div
-            className="flex flex-wrap items-center gap-1.5"
-            role="radiogroup"
-            aria-label="Select post activity context"
-          >
+          {/* Activity Selector Pills */}
+          <div className="flex flex-wrap items-center gap-1.5" role="radiogroup">
             {ACTIVITIES.map((act) => {
               const Icon = act.icon;
               const isSelected = selectedActivity === act.type;
@@ -129,13 +244,11 @@ export function PostComposer({ defaultActivity, onPostCreated }: PostComposerPro
                 <button
                   key={act.type}
                   type="button"
-                  role="radio"
-                  aria-checked={isSelected}
                   onClick={() => setSelectedActivity(act.type)}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-all duration-150 ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all duration-200 ${
                     isSelected
                       ? act.activeClass
-                      : "border-white/10 bg-white/5 text-slate-400 hover:text-slate-200 hover:bg-white/10"
+                      : "border-white/10 bg-white/[0.02] text-[#8A8A8A] hover:text-[#F5F5F3] hover:bg-white/[0.06]"
                   }`}
                 >
                   <Icon className="h-3 w-3" />
@@ -148,11 +261,11 @@ export function PostComposer({ defaultActivity, onPostCreated }: PostComposerPro
 
         {/* Composer Form */}
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="rounded-lg border border-white/10 bg-black/40 focus-within:border-white/25 transition-all">
-            {/* Active context label inside composer */}
-            <div className="px-3.5 pt-3 pb-1 flex items-center gap-1.5 text-xs select-none">
+          <div className="rounded-xl border border-white/[0.08] bg-[#0A0A0A]/60 focus-within:border-white/20 transition-all overflow-hidden">
+            {/* Active context badge */}
+            <div className="px-4 pt-3 pb-1 flex items-center gap-2 text-xs select-none">
               <ActiveIcon className={`h-3.5 w-3.5 ${activeMeta.accentClass}`} />
-              <span className="font-medium text-slate-300 text-[11px] tracking-wide uppercase">
+              <span className="font-mono text-[10px] text-[#8A8A8A] uppercase tracking-widest">
                 {activeMeta.label}
               </span>
             </div>
@@ -162,50 +275,177 @@ export function PostComposer({ defaultActivity, onPostCreated }: PostComposerPro
               placeholder={activeMeta.prompt}
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent px-3.5 py-1 text-sm text-slate-100 resize-none min-h-[90px] placeholder:text-slate-500"
+              className="border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent px-4 py-2 text-sm text-[#F5F5F3] resize-none min-h-[90px] placeholder:text-zinc-600"
               maxLength={MAX_CHARS + 50}
-              aria-label={`Post content for ${activeMeta.label}`}
             />
 
-            {/* Bottom Bar: Character counter & Submit */}
-            <div className="px-3.5 py-2 border-t border-white/10 flex items-center justify-between bg-white/[0.02]">
-              <div className="flex items-center gap-2">
+            {/* PREVIEW ATTACHMENTS AREA */}
+            {(linkAttachment || mediaAttachment || showLinkInput) && (
+              <div className="px-4 pb-3 space-y-2">
+                {/* Link Input Row */}
+                {showLinkInput && !linkAttachment && (
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.03] border border-white/10">
+                    <Globe className="h-4 w-4 text-[#8A8A8A] shrink-0" />
+                    <Input
+                      placeholder="https://example.com/project-or-article"
+                      value={linkUrlInput}
+                      onChange={(e) => setLinkUrlInput(e.target.value)}
+                      className="h-8 text-xs bg-transparent border-none focus-visible:ring-0 text-[#F5F5F3]"
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddLink())}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleAddLink}
+                      disabled={isFetchingLink || !linkUrlInput.trim()}
+                      className="h-7 text-xs bg-white text-black hover:bg-slate-200"
+                    >
+                      {isFetchingLink ? <Loader2 className="h-3 w-3 animate-spin" /> : "Attach"}
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => setShowLinkInput(false)}
+                      className="text-[#8A8A8A] hover:text-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Attached Link Preview Card */}
+                {linkAttachment && (
+                  <div className="relative group p-3 rounded-xl bg-white/[0.025] border border-white/10 flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-white/5 border border-white/10 text-white shrink-0">
+                      <LinkIcon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <p className="text-xs font-medium text-[#F5F5F3] truncate">
+                        {linkAttachment.title || linkAttachment.url}
+                      </p>
+                      {linkAttachment.description && (
+                        <p className="text-[11px] text-[#8A8A8A] line-clamp-1">
+                          {linkAttachment.description}
+                        </p>
+                      )}
+                      <p className="text-[10px] font-mono text-zinc-500 truncate">
+                        {linkAttachment.url}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLinkAttachment(null)}
+                      className="text-[#8A8A8A] hover:text-white p-1"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Attached Media Preview (Image or Video) */}
+                {mediaAttachment && (
+                  <div className="relative group rounded-xl overflow-hidden border border-white/10 max-h-56 bg-black">
+                    {mediaAttachment.type === "image" ? (
+                      <img
+                        src={mediaAttachment.previewUrl || mediaAttachment.url}
+                        alt="Media upload preview"
+                        className="w-full h-48 object-cover"
+                      />
+                    ) : (
+                      <video
+                        src={mediaAttachment.previewUrl || mediaAttachment.url}
+                        controls
+                        className="w-full h-48 object-cover"
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setMediaAttachment(null)}
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white hover:bg-black transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Hidden File Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept="image/*,video/*"
+              className="hidden"
+            />
+
+            {/* Bottom Bar: Action Controls & Submit */}
+            <div className="px-4 py-2.5 border-t border-white/[0.08] flex items-center justify-between bg-white/[0.015]">
+              {/* Attachment Toggle Buttons */}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setShowLinkInput(!showLinkInput)}
+                  className="p-1.5 rounded-lg text-[#8A8A8A] hover:text-[#F5F5F3] hover:bg-white/5 transition-colors flex items-center gap-1 text-xs"
+                  title="Attach link URL"
+                >
+                  <LinkIcon className="h-4 w-4" />
+                  <span className="hidden sm:inline text-[11px]">Link</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingMedia}
+                  className="p-1.5 rounded-lg text-[#8A8A8A] hover:text-[#F5F5F3] hover:bg-white/5 transition-colors flex items-center gap-1 text-xs"
+                  title="Attach Image or Video"
+                >
+                  {isUploadingMedia ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <ImageIcon className="h-4 w-4" />
+                      <span className="hidden sm:inline text-[11px]">Media</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Character Counter & Submit */}
+              <div className="flex items-center gap-3">
                 <span
                   className={`text-[11px] font-mono transition-colors ${
                     isOverLimit
                       ? "text-rose-400 font-semibold"
                       : charsLeft <= 50
                       ? "text-amber-400"
-                      : "text-slate-500"
+                      : "text-[#8A8A8A]"
                   }`}
                 >
                   {content.length}/{MAX_CHARS}
                 </span>
-                {error && (
-                  <span className="text-[11px] text-rose-400 truncate max-w-xs font-medium">
-                    {error}
-                  </span>
-                )}
-              </div>
 
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isPostDisabled}
-                className="h-7 px-3.5 text-xs font-medium gap-1.5 bg-white text-black hover:bg-slate-200 shadow-none rounded-md"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Send className="h-3 w-3" />
-                )}
-                <span>Share</span>
-              </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isPostDisabled}
+                  className="h-8 px-4 text-xs font-medium gap-1.5 bg-[#F5F5F3] text-[#0A0A0A] hover:bg-white rounded-full shadow-lg transition-all"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  <span>Post</span>
+                </Button>
+              </div>
             </div>
           </div>
+
+          {error && (
+            <p className="text-xs text-rose-400 px-1 font-medium">{error}</p>
+          )}
         </form>
       </CardContent>
     </Card>
   );
 }
-

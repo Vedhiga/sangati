@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -8,9 +8,8 @@ import {
   Send,
   Loader2,
   AlertCircle,
-  Hammer,
-  Brain,
-  MessageSquare,
+  Phone,
+  Video,
   Sparkles,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -23,9 +22,9 @@ import {
 } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CallModal, CallState, CallType } from "@/components/calling/call-modal";
 
 interface ActivityMeta {
   type: ActivityType;
@@ -35,10 +34,10 @@ interface ActivityMeta {
 }
 
 const ACTIVITY_MAP: Record<ActivityType, ActivityMeta> = {
-  BUILD: { type: "BUILD", label: "Build", badgeBg: "bg-amber-500/10 border-amber-300/50", badgeText: "text-amber-800" },
-  LEARN: { type: "LEARN", label: "Learn", badgeBg: "bg-indigo-500/10 border-indigo-300/50", badgeText: "text-indigo-800" },
-  CONVERSATION: { type: "CONVERSATION", label: "Conversation", badgeBg: "bg-pink-500/10 border-pink-300/50", badgeText: "text-pink-800" },
-  EXPLORE: { type: "EXPLORE", label: "Explore", badgeBg: "bg-teal-500/10 border-teal-300/50", badgeText: "text-teal-800" },
+  BUILD: { type: "BUILD", label: "Build", badgeBg: "bg-white/10 border-white/20", badgeText: "text-white" },
+  LEARN: { type: "LEARN", label: "Learn", badgeBg: "bg-white/10 border-white/20", badgeText: "text-white" },
+  CONVERSATION: { type: "CONVERSATION", label: "Conversation", badgeBg: "bg-white/10 border-white/20", badgeText: "text-white" },
+  EXPLORE: { type: "EXPLORE", label: "Explore", badgeBg: "bg-white/10 border-white/20", badgeText: "text-white" },
 };
 
 function formatMessageTime(dateString: string): string {
@@ -79,6 +78,19 @@ export default function ConversationDetailPage() {
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
 
+  // WebRTC Calling State
+  const [activeCall, setActiveCall] = useState<{
+    callType: CallType;
+    callState: CallState;
+    remoteUser: { display_name: string; username: string; avatar_url?: string | null };
+  } | null>(null);
+
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const channelRef = useRef<any>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -89,6 +101,15 @@ export default function ConversationDetailPage() {
       });
     }
   }, []);
+
+  // Clear unread badge when entering conversation
+  const markAsRead = useCallback(async () => {
+    try {
+      await api.put(`/api/v1/conversations/${conversationId}/read`);
+    } catch {
+      // Ignore background errors
+    }
+  }, [conversationId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -120,6 +141,7 @@ export default function ConversationDetailPage() {
           setMessages(msgsData.messages);
           setIsLoading(false);
           setTimeout(() => scrollToBottom(false), 50);
+          markAsRead();
         }
       } catch (err) {
         if (isMounted) {
@@ -130,11 +152,6 @@ export default function ConversationDetailPage() {
             }
             if (err.status === 404) {
               setError("This conversation does not exist or you do not have permission to view it.");
-              setIsLoading(false);
-              return;
-            }
-            if (err.status === 403) {
-              setError("You are not a participant in this conversation.");
               setIsLoading(false);
               return;
             }
@@ -152,7 +169,220 @@ export default function ConversationDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [conversationId, router, scrollToBottom]);
+  }, [conversationId, router, scrollToBottom, markAsRead]);
+
+  // WebRTC PeerConnection Setup
+  const createPeerConnection = useCallback(() => {
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+      ],
+    });
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate && channelRef.current) {
+        channelRef.current.send({
+          type: "broadcast",
+          event: "webrtc_ice_candidate",
+          payload: { candidate: event.candidate, senderId: currentUserId },
+        });
+      }
+    };
+
+    pc.ontrack = (event) => {
+      if (event.streams && event.streams[0]) {
+        setRemoteStream(event.streams[0]);
+      }
+    };
+
+    peerConnectionRef.current = pc;
+    return pc;
+  }, [currentUserId]);
+
+  // Cleanup Call Media
+  const endCall = useCallback(() => {
+    if (localStream) {
+      localStream.getTracks().forEach((track) => track.stop());
+      setLocalStream(null);
+    }
+    setRemoteStream(null);
+
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: "broadcast",
+        event: "call_end",
+        payload: { senderId: currentUserId },
+      });
+    }
+
+    setActiveCall(null);
+  }, [localStream, currentUserId]);
+
+  // Supabase Realtime Broadcast Signaling Channel
+  useEffect(() => {
+    if (!conversationId || !currentUserId) return;
+
+    const channel = supabase.channel(`call:${conversationId}`);
+
+    channel
+      .on("broadcast", { event: "call_invite" }, async ({ payload }) => {
+        if (payload.senderId !== currentUserId) {
+          setActiveCall({
+            callType: payload.callType,
+            callState: "incoming",
+            remoteUser: payload.senderUser,
+          });
+        }
+      })
+      .on("broadcast", { event: "call_accept" }, async ({ payload }) => {
+        if (payload.senderId !== currentUserId && peerConnectionRef.current) {
+          setActiveCall((prev) => (prev ? { ...prev, callState: "active" } : null));
+          const offer = await peerConnectionRef.current.createOffer();
+          await peerConnectionRef.current.setLocalDescription(offer);
+          channel.send({
+            type: "broadcast",
+            event: "webrtc_offer",
+            payload: { offer, senderId: currentUserId },
+          });
+        }
+      })
+      .on("broadcast", { event: "call_reject" }, ({ payload }) => {
+        if (payload.senderId !== currentUserId) {
+          endCall();
+        }
+      })
+      .on("broadcast", { event: "webrtc_offer" }, async ({ payload }) => {
+        if (payload.senderId !== currentUserId && peerConnectionRef.current) {
+          await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(payload.offer));
+          const answer = await peerConnectionRef.current.createAnswer();
+          await peerConnectionRef.current.setLocalDescription(answer);
+          channel.send({
+            type: "broadcast",
+            event: "webrtc_answer",
+            payload: { answer, senderId: currentUserId },
+          });
+        }
+      })
+      .on("broadcast", { event: "webrtc_answer" }, async ({ payload }) => {
+        if (payload.senderId !== currentUserId && peerConnectionRef.current) {
+          await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(payload.answer));
+        }
+      })
+      .on("broadcast", { event: "webrtc_ice_candidate" }, async ({ payload }) => {
+        if (payload.senderId !== currentUserId && peerConnectionRef.current) {
+          try {
+            await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate));
+          } catch (e) {
+            console.error("Error adding ice candidate:", e);
+          }
+        }
+      })
+      .on("broadcast", { event: "call_end" }, ({ payload }) => {
+        if (payload.senderId !== currentUserId) {
+          endCall();
+        }
+      })
+      .subscribe();
+
+    channelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId, currentUserId, endCall]);
+
+  // Start Outgoing Call
+  const startCall = async (type: CallType) => {
+    if (!conversation?.other_user) return;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: type === "video",
+      });
+
+      setLocalStream(stream);
+      const pc = createPeerConnection();
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+      setActiveCall({
+        callType: type,
+        callState: "outgoing",
+        remoteUser: {
+          display_name: conversation.other_user.display_name,
+          username: conversation.other_user.username,
+          avatar_url: conversation.other_user.avatar_url,
+        },
+      });
+
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: "broadcast",
+          event: "call_invite",
+          payload: {
+            callType: type,
+            senderId: currentUserId,
+            senderUser: {
+              display_name: conversation.other_user.display_name,
+              username: conversation.other_user.username,
+              avatar_url: conversation.other_user.avatar_url,
+            },
+          },
+        });
+      }
+    } catch (err) {
+      alert("Microphone or camera permission was denied or device is unavailable.");
+      console.error(err);
+    }
+  };
+
+  // Accept Incoming Call
+  const acceptCall = async () => {
+    if (!activeCall) return;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: activeCall.callType === "video",
+      });
+
+      setLocalStream(stream);
+      const pc = createPeerConnection();
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+      setActiveCall({ ...activeCall, callState: "active" });
+
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: "broadcast",
+          event: "call_accept",
+          payload: { senderId: currentUserId },
+        });
+      }
+    } catch (err) {
+      alert("Microphone or camera permission was denied.");
+      console.error(err);
+      endCall();
+    }
+  };
+
+  // Reject Incoming Call
+  const rejectCall = () => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: "broadcast",
+        event: "call_reject",
+        payload: { senderId: currentUserId },
+      });
+    }
+    endCall();
+  };
 
   // Periodic polling for incoming messages
   useEffect(() => {
@@ -168,16 +398,10 @@ export default function ConversationDetailPage() {
             setTimeout(() => scrollToBottom(true), 50);
             return msgsData.messages;
           }
-          const prevLast = prev[prev.length - 1];
-          const newLast = msgsData.messages[msgsData.messages.length - 1];
-          if (prevLast?.id !== newLast?.id) {
-            setTimeout(() => scrollToBottom(true), 50);
-            return msgsData.messages;
-          }
           return prev;
         });
       } catch {
-        // Silently skip polling errors
+        // Silently skip
       }
     }, 5000);
 
@@ -231,19 +455,32 @@ export default function ConversationDetailPage() {
         .join("")
         .toUpperCase()
         .slice(0, 2)
-    : "SG";
+    : "S";
 
   return (
-    <div className="w-full flex flex-col h-[calc(100vh-6rem)] animate-in fade-in duration-300">
+    <div className="w-full flex flex-col h-[calc(100vh-6rem)] animate-fade-in-up">
+      {/* WebRTC Active Call Modal Overlay */}
+      {activeCall && (
+        <CallModal
+          callType={activeCall.callType}
+          callState={activeCall.callState}
+          remoteUser={activeCall.remoteUser}
+          localStream={localStream}
+          remoteStream={remoteStream}
+          onAccept={acceptCall}
+          onReject={rejectCall}
+          onEndCall={endCall}
+        />
+      )}
+
       {/* Top Header Bar */}
-      <div className="flex items-center justify-between pb-4 border-b border-zinc-800/80 shrink-0">
+      <div className="flex items-center justify-between pb-4 border-b border-white/[0.08] shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <Link href="/messages">
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"
-              aria-label="Back to Messages"
+              className="h-8 w-8 p-0 rounded-full text-[#8A8A8A] hover:text-white hover:bg-white/5"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -251,47 +488,61 @@ export default function ConversationDetailPage() {
 
           {conversation && (
             <div className="flex items-center gap-3 min-w-0">
-              <Avatar className={`h-9 w-9 border shrink-0 ${isGroup ? "border-amber-500/40 ring-2 ring-amber-500/20" : "border-zinc-700/80"}`}>
+              <Avatar className="h-9 w-9 border border-white/15 shrink-0">
                 {!isGroup && otherUser?.avatar_url && (
                   <AvatarImage src={otherUser.avatar_url} alt={title} />
                 )}
-                <AvatarFallback className={`text-xs font-extrabold ${isGroup ? "bg-amber-500/20 text-amber-300" : "bg-zinc-800 text-zinc-200"}`}>
+                <AvatarFallback className="bg-zinc-900 text-[#F5F5F3] text-xs font-semibold">
                   {isGroup ? <Sparkles className="h-4 w-4" /> : initials}
                 </AvatarFallback>
               </Avatar>
 
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-bold text-zinc-100 truncate">
+                  <h2 className="text-sm font-semibold text-[#F5F5F3] truncate">
                     {title}
                   </h2>
-                  {isGroup && (
-                    <span className="text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20 font-medium px-2 py-0.5 rounded-full shrink-0">
-                      Group ({conversation.participants?.length || 2} members)
-                    </span>
-                  )}
                   {!isGroup && activityMeta && (
                     <span
-                      className={`text-[10px] font-medium py-0.5 px-2 rounded-full border shrink-0 ${activityMeta.badgeBg} ${activityMeta.badgeText}`}
+                      className={`text-[10px] font-mono py-0.5 px-2 rounded-full border shrink-0 ${activityMeta.badgeBg}`}
                     >
                       {activityMeta.label}
                     </span>
                   )}
                 </div>
                 {!isGroup && otherUser && (
-                  <p className="text-[11px] text-zinc-400 truncate">
+                  <p className="text-[11px] text-[#8A8A8A] truncate font-mono">
                     @{otherUser.username}
-                  </p>
-                )}
-                {isGroup && conversation.participants && (
-                  <p className="text-[11px] text-zinc-400 truncate">
-                    With: {conversation.participants.map(p => `@${p.username}`).join(", ")}
                   </p>
                 )}
               </div>
             </div>
           )}
         </div>
+
+        {/* 📞 Voice & 🎥 Video Calling Buttons (1-to-1 Only) */}
+        {!isGroup && otherUser && (
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => startCall("voice")}
+              className="h-8 gap-1.5 px-3 border-white/15 bg-white/5 text-[#F5F5F3] hover:bg-white hover:text-black text-xs rounded-full transition-all"
+            >
+              <Phone className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Voice Call</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => startCall("video")}
+              className="h-8 gap-1.5 px-3 border-white/15 bg-white/5 text-[#F5F5F3] hover:bg-white hover:text-black text-xs rounded-full transition-all"
+            >
+              <Video className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Video Call</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Error state */}
@@ -299,9 +550,9 @@ export default function ConversationDetailPage() {
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="max-w-md text-center space-y-3">
             <AlertCircle className="h-8 w-8 text-rose-400 mx-auto" />
-            <p className="text-sm text-zinc-300 font-medium">{error}</p>
+            <p className="text-sm text-[#F5F5F3] font-medium">{error}</p>
             <Link href="/messages">
-              <Button size="sm" variant="outline" className="text-xs border-zinc-700 text-zinc-300 rounded-xl hover:bg-zinc-800">
+              <Button size="sm" variant="outline" className="text-xs border-white/15 text-[#F5F5F3] rounded-full">
                 Return to messages
               </Button>
             </Link>
@@ -309,7 +560,7 @@ export default function ConversationDetailPage() {
         </div>
       ) : isLoading ? (
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
+          <Loader2 className="h-6 w-6 animate-spin text-[#8A8A8A]" />
         </div>
       ) : (
         <>
@@ -317,53 +568,39 @@ export default function ConversationDetailPage() {
           <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
             {/* Conversation Intro Header */}
             {conversation && (
-              <div className="py-6 px-4 text-center space-y-2 border border-zinc-800/80 mb-4 bg-zinc-900/40 rounded-2xl backdrop-blur-sm">
-                <Avatar className="h-14 w-14 border border-zinc-700 mx-auto">
+              <div className="py-6 px-4 text-center space-y-2 border border-white/[0.08] bg-sangati-card rounded-2xl">
+                <Avatar className="h-14 w-14 border border-white/15 mx-auto">
                   {!isGroup && otherUser?.avatar_url && (
                     <AvatarImage src={otherUser.avatar_url} />
                   )}
-                  <AvatarFallback className={`text-sm font-bold ${isGroup ? "bg-amber-500/20 text-amber-300" : "bg-zinc-800 text-zinc-200"}`}>
+                  <AvatarFallback className="bg-zinc-900 text-[#F5F5F3] text-base font-semibold">
                     {isGroup ? <Sparkles className="h-6 w-6" /> : initials}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="text-sm font-extrabold text-zinc-100">
+                  <h3 className="text-sm font-semibold text-[#F5F5F3]">
                     {title}
                   </h3>
                   {!isGroup && otherUser && (
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-[#8A8A8A] font-mono">
                       @{otherUser.username}
                     </p>
                   )}
-                  {isGroup && conversation.participants && (
-                    <div className="flex flex-wrap justify-center gap-1 pt-1.5">
-                      {conversation.participants.map((p) => (
-                        <span key={p.user_id} className="text-[10px] bg-zinc-800 text-zinc-300 border border-zinc-700/60 px-2 py-0.5 rounded-full font-medium">
-                          @{p.username}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
-                {!isGroup && otherUser?.bio && (
-                  <p className="text-xs text-zinc-400 max-w-sm mx-auto italic">
-                    &ldquo;{otherUser.bio}&rdquo;
-                  </p>
-                )}
-                <p className="text-[11px] text-zinc-500 font-medium pt-1">
-                  {isGroup ? "Group conversation. Quiet space for real collaboration." : "Connected on Sangati. 1-to-1 private conversation."}
+                <p className="text-[11px] text-[#8A8A8A] font-normal pt-1">
+                  Connected on Sangati. 1-to-1 quiet conversation & WebRTC calls.
                 </p>
               </div>
             )}
 
-            {/* Empty messages state */}
+            {/* Empty Messages */}
             {messages.length === 0 && (
-              <div className="py-8 text-center text-xs text-zinc-500">
+              <div className="py-8 text-center text-xs text-[#8A8A8A]">
                 No notes exchanged yet. Send a quiet note to break the ice!
               </div>
             )}
 
-            {/* Render message bubbles */}
+            {/* Message Bubbles */}
             {messages.map((msg, index) => {
               const isMine = msg.sender_id === currentUserId;
               const prevMsg = messages[index - 1];
@@ -376,7 +613,7 @@ export default function ConversationDetailPage() {
                 <div key={msg.id} className="space-y-3">
                   {showDateHeader && (
                     <div className="flex items-center justify-center my-3">
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-zinc-400 bg-zinc-900 border border-zinc-800 px-3 py-0.5 rounded-full">
+                      <span className="text-[10px] uppercase tracking-widest font-mono text-[#8A8A8A] bg-white/[0.02] border border-white/10 px-3 py-0.5 rounded-full">
                         {formatMessageDate(msg.created_at)}
                       </span>
                     </div>
@@ -388,15 +625,15 @@ export default function ConversationDetailPage() {
                     }`}
                   >
                     <div
-                      className={`max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                      className={`max-w-[85%] sm:max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
                         isMine
-                          ? "bg-zinc-100 text-zinc-950 font-normal rounded-tr-xs"
-                          : "bg-zinc-900/90 text-zinc-100 border border-zinc-800 rounded-tl-xs"
+                          ? "bg-[#F5F5F3] text-[#0A0A0A] font-medium rounded-tr-none"
+                          : "bg-white/[0.03] text-[#F5F5F3] border border-white/10 rounded-tl-none"
                       }`}
                     >
                       {msg.content}
                     </div>
-                    <span className="text-[10px] text-zinc-500 px-1 mt-1 font-mono">
+                    <span className="text-[10px] text-[#8A8A8A] px-1 mt-1 font-mono">
                       {formatMessageTime(msg.created_at)}
                     </span>
                   </div>
@@ -416,8 +653,8 @@ export default function ConversationDetailPage() {
           )}
 
           {/* Composer */}
-          <div className="pt-3 pb-1 border-t border-zinc-800/80 shrink-0">
-            <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/80 p-2.5 focus-within:border-zinc-700 transition-all shadow-lg">
+          <div className="pt-3 pb-1 border-t border-white/[0.08] shrink-0">
+            <div className="relative rounded-2xl border border-white/[0.08] bg-sangati-card p-3 focus-within:border-white/20 transition-all shadow-xl">
               <Textarea
                 ref={textareaRef}
                 value={content}
@@ -427,22 +664,22 @@ export default function ConversationDetailPage() {
                 maxLength={2000}
                 rows={2}
                 disabled={isSending}
-                className="w-full resize-none border-0 p-1 text-sm text-zinc-100 bg-transparent focus-visible:ring-0 shadow-none placeholder:text-zinc-500 min-h-[48px]"
+                className="w-full resize-none border-0 p-1 text-sm text-[#F5F5F3] bg-transparent focus-visible:ring-0 shadow-none placeholder:text-zinc-600 min-h-[48px]"
               />
 
-              <div className="flex items-center justify-between pt-2 text-[11px] text-zinc-500 border-t border-zinc-800/60 px-1">
+              <div className="flex items-center justify-between pt-2 text-[11px] text-[#8A8A8A] border-t border-white/[0.06] px-1">
                 <span className="font-mono">{content.length} / 2000</span>
 
                 <Button
                   size="sm"
                   onClick={handleSendMessage}
                   disabled={!content.trim() || isSending || content.length > 2000}
-                  className="h-7 px-3 text-xs gap-1.5 bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-semibold rounded-lg shadow-sm"
+                  className="h-8 px-4 text-xs gap-1.5 bg-[#F5F5F3] text-[#0A0A0A] hover:bg-white font-medium rounded-full shadow-lg transition-all"
                 >
                   {isSending ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Send className="h-3 w-3" />
+                    <Send className="h-3.5 w-3.5" />
                   )}
                   <span>Send</span>
                 </Button>

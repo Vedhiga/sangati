@@ -1,7 +1,9 @@
+import os
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.errors import register_error_handlers
@@ -18,26 +20,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger("sangati.main")
 
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "static", "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up Sangati API in %s mode...", settings.ENVIRONMENT)
-    # For dev convenience or SQLite testing, ensure tables exist
     try:
         Base.metadata.create_all(bind=engine)
-        # For SQLite local development: ensure newly added columns exist
-        if "sqlite" in str(engine.url):
-            from sqlalchemy import inspect, text
-            inspector = inspect(engine)
-            if "profiles" in inspector.get_table_names():
-                columns = [c["name"] for c in inspector.get_columns("profiles")]
-                if "interests" not in columns:
-                    with engine.begin() as conn:
-                        conn.execute(text("ALTER TABLE profiles ADD COLUMN interests TEXT"))
-                    logger.info("Auto-added missing column 'interests' to profiles table.")
         logger.info("Database schema verified.")
     except Exception as e:
-        logger.warning("Could not auto-create database tables on startup (migrations may be required): %s", e)
+        logger.warning("Could not auto-create database tables on startup: %s", e)
     yield
     logger.info("Shutting down Sangati API...")
 
@@ -52,10 +46,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Mount static uploads directory
+app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
+
 # Register custom error response handlers
 register_error_handlers(app)
 
-# Register CORS middleware (outermost layer to guarantee CORS headers on all responses)
+# Register CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

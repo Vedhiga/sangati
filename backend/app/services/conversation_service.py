@@ -27,7 +27,7 @@ from app.core.errors import (
     ConversationNotFoundException,
     UnauthorizedConversationActionException,
 )
-from app.models.notification import NotificationType
+from app.models.notification import Notification, NotificationType
 from app.services.notification_service import NotificationService
 
 logger = logging.getLogger("sidequest.services.conversation")
@@ -450,3 +450,33 @@ class ConversationService:
             content=msg.content,
             created_at=msg.created_at,
         )
+
+    @staticmethod
+    def get_unread_count(db: Session, current_user_id: UUID) -> int:
+        """
+        Count unread NEW_MESSAGE notifications for the authenticated user.
+        """
+        count = (
+            db.query(Notification)
+            .filter(
+                Notification.recipient_id == current_user_id,
+                Notification.type == NotificationType.NEW_MESSAGE,
+                Notification.is_read == False,
+            )
+            .count()
+        )
+        return count
+
+    @staticmethod
+    def mark_conversation_read(db: Session, conversation_id: UUID, current_user_id: UUID) -> None:
+        """
+        Mark all NEW_MESSAGE notifications for a given conversation_id as read for current user.
+        """
+        db.query(Notification).filter(
+            Notification.recipient_id == current_user_id,
+            Notification.type == NotificationType.NEW_MESSAGE,
+            Notification.reference_id == conversation_id,
+            Notification.is_read == False,
+        ).update({"is_read": True}, synchronize_session=False)
+        db.commit()
+

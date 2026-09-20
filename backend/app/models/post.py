@@ -13,6 +13,15 @@ class ActivityPost(Base):
     author_id = Column(GUID, nullable=False, index=True)
     activity_type = Column(String(20), nullable=False, index=True)
     content = Column(Text, nullable=False)
+
+    # Attachments: Media & Link Previews
+    media_url = Column(String, nullable=True)
+    media_type = Column(String, nullable=True)
+    link_url = Column(String, nullable=True)
+    link_title = Column(String, nullable=True)
+    link_description = Column(String, nullable=True)
+    link_image = Column(String, nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

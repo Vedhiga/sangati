@@ -28,6 +28,12 @@ class PostCreate(BaseModel):
         max_length=1000,
         description="Content of the post, up to 1000 characters.",
     )
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None
+    link_url: Optional[str] = None
+    link_title: Optional[str] = None
+    link_description: Optional[str] = None
+    link_image: Optional[str] = None
 
     @field_validator("content")
     @classmethod
@@ -45,6 +51,12 @@ class PostUpdate(BaseModel):
         max_length=1000,
         description="Updated post content, up to 1000 characters.",
     )
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None
+    link_url: Optional[str] = None
+    link_title: Optional[str] = None
+    link_description: Optional[str] = None
+    link_image: Optional[str] = None
 
     @field_validator("content")
     @classmethod
@@ -60,6 +72,12 @@ class PostResponse(BaseModel):
     author_id: UUID
     activity_type: ActivityType
     content: str
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None
+    link_url: Optional[str] = None
+    link_title: Optional[str] = None
+    link_description: Optional[str] = None
+    link_image: Optional[str] = None
     author: AuthorPublic
     created_at: datetime
     updated_at: datetime

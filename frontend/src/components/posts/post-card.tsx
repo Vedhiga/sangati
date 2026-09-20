@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Hammer,
   Brain,
@@ -12,6 +12,8 @@ import {
   X,
   Loader2,
   Clock,
+  ExternalLink,
+  Globe,
 } from "lucide-react";
 import { ActivityType, Post } from "@/types";
 import { api, ApiClientError } from "@/lib/api";
@@ -39,25 +41,25 @@ const ACTIVITY_MAP: Record<ActivityType, ActivityMeta> = {
     type: "BUILD",
     label: "Build",
     icon: Hammer,
-    badgeBg: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+    badgeBg: "bg-white/10 text-white border-white/20",
   },
   LEARN: {
     type: "LEARN",
     label: "Learn",
     icon: Brain,
-    badgeBg: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    badgeBg: "bg-white/10 text-white border-white/20",
   },
   CONVERSATION: {
     type: "CONVERSATION",
     label: "Conversation",
     icon: MessageSquare,
-    badgeBg: "bg-violet-500/10 text-violet-400 border-violet-500/20",
+    badgeBg: "bg-white/10 text-white border-white/20",
   },
   EXPLORE: {
     type: "EXPLORE",
     label: "Explore",
     icon: Sparkles,
-    badgeBg: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+    badgeBg: "bg-white/10 text-white border-white/20",
   },
 };
 
@@ -110,7 +112,7 @@ export function PostCard({
         .join("")
         .toUpperCase()
         .slice(0, 2)
-    : "SQ";
+    : "S";
 
   const isEdited =
     post.updated_at &&
@@ -159,35 +161,43 @@ export function PostCard({
     }
   };
 
+  // Helper for domain extraction
+  const getDomain = (url: string) => {
+    try {
+      return new URL(url).hostname.replace("www.", "");
+    } catch {
+      return url;
+    }
+  };
+
   return (
-    <Card className="border border-white/10 bg-sangati-glass rounded-xl overflow-hidden shadow-none hover:border-white/20 transition-all duration-200">
-      <CardContent className="p-4 sm:p-5 space-y-3.5">
-        {/* Header: Author Info, Activity Badge, Time, and Actions */}
+    <Card className="border border-white/[0.08] bg-sangati-glass rounded-2xl overflow-hidden shadow-2xl hover:border-white/20 transition-all duration-300">
+      <CardContent className="p-5 space-y-4">
+        {/* Header: Author Info, Activity Badge, Time, Actions */}
         <div className="flex items-start justify-between gap-3">
-          {/* Author info */}
           <div className="flex items-center gap-3 min-w-0">
             <Avatar className="h-9 w-9 border border-white/15 shrink-0">
               <AvatarImage src={post.author.avatar_url || undefined} alt={post.author.display_name} />
-              <AvatarFallback className="bg-slate-800 text-slate-300 text-xs font-semibold">
+              <AvatarFallback className="bg-zinc-900 text-[#F5F5F3] text-xs font-semibold">
                 {initials}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-slate-100 text-sm truncate leading-snug">
+                <h3 className="font-semibold text-[#F5F5F3] text-sm truncate leading-snug">
                   {post.author.display_name}
                 </h3>
                 <span
-                  className={`inline-flex items-center gap-1 text-[10px] font-medium py-0.5 px-2 rounded-md border ${activityMeta.badgeBg}`}
+                  className={`inline-flex items-center gap-1 text-[10px] font-mono py-0.5 px-2 rounded-full border ${activityMeta.badgeBg}`}
                 >
                   <ActivityIcon className="h-3 w-3" />
                   <span>{activityMeta.label}</span>
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                <span className="truncate">@{post.author.username}</span>
+              <div className="flex items-center gap-1.5 text-xs text-[#8A8A8A]">
+                <span className="truncate font-mono">@{post.author.username}</span>
                 <span>•</span>
-                <span className="flex items-center gap-1 shrink-0 text-slate-400">
+                <span className="flex items-center gap-1 shrink-0">
                   <Clock className="h-3 w-3" />
                   {formatRelativeTime(post.created_at)}
                   {isEdited && <span className="italic text-[10px]">(edited)</span>}
@@ -196,15 +206,14 @@ export function PostCard({
             </div>
           </div>
 
-          {/* Author action buttons */}
+          {/* Author Actions */}
           {isAuthor && !isEditing && !isConfirmingDelete && (
             <div className="flex items-center gap-1 shrink-0">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsEditing(true)}
-                className="h-7 w-7 p-0 text-slate-400 hover:text-white hover:bg-white/5"
-                aria-label="Edit post"
+                className="h-7 w-7 p-0 text-[#8A8A8A] hover:text-white hover:bg-white/5"
               >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
@@ -212,8 +221,7 @@ export function PostCard({
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsConfirmingDelete(true)}
-                className="h-7 w-7 p-0 text-slate-400 hover:text-rose-400 hover:bg-white/5"
-                aria-label="Delete post"
+                className="h-7 w-7 p-0 text-[#8A8A8A] hover:text-rose-400 hover:bg-white/5"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -221,20 +229,19 @@ export function PostCard({
           )}
         </div>
 
-        {/* Post Content or Edit Form */}
+        {/* Content or Edit Form */}
         {isEditing ? (
           <div className="space-y-2 pt-1">
             <Textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              className="text-sm min-h-[80px] bg-black/40 border-white/15 text-slate-100 focus:border-white/30"
+              className="text-sm min-h-[80px] bg-[#0A0A0A] border-white/15 text-[#F5F5F3] focus:border-white/30"
               maxLength={550}
               autoFocus
-              aria-label="Edit post content"
             />
             {error && <p className="text-xs text-rose-400">{error}</p>}
             <div className="flex items-center justify-between pt-1">
-              <span className="text-[11px] font-mono text-slate-400">
+              <span className="text-[11px] font-mono text-[#8A8A8A]">
                 {editContent.length}/500
               </span>
               <div className="flex items-center gap-2">
@@ -243,7 +250,7 @@ export function PostCard({
                   variant="ghost"
                   disabled={isSaving}
                   onClick={handleCancelEdit}
-                  className="h-7 text-xs px-2.5 text-slate-400 hover:text-white"
+                  className="h-7 text-xs px-2.5 text-[#8A8A8A] hover:text-white"
                 >
                   <X className="h-3 w-3 mr-1" />
                   Cancel
@@ -252,7 +259,7 @@ export function PostCard({
                   size="sm"
                   disabled={isSaving || !editContent.trim() || editContent.length > 500}
                   onClick={handleSaveEdit}
-                  className="h-7 text-xs px-3 bg-white text-black hover:bg-slate-200 font-medium"
+                  className="h-7 text-xs px-3 bg-[#F5F5F3] text-black hover:bg-white font-medium"
                 >
                   {isSaving ? (
                     <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -265,7 +272,7 @@ export function PostCard({
             </div>
           </div>
         ) : isConfirmingDelete ? (
-          <div className="p-3.5 rounded-lg border border-rose-500/20 bg-rose-500/5 space-y-2.5">
+          <div className="p-3.5 rounded-xl border border-rose-500/20 bg-rose-500/5 space-y-2.5">
             <p className="text-xs text-rose-300 font-medium">
               Delete this post? This action cannot be undone.
             </p>
@@ -293,19 +300,75 @@ export function PostCard({
                   setIsConfirmingDelete(false);
                   setError(null);
                 }}
-                className="h-7 text-xs px-2.5 text-slate-400 hover:text-white"
+                className="h-7 text-xs px-2.5 text-[#8A8A8A] hover:text-white"
               >
                 Cancel
               </Button>
             </div>
           </div>
         ) : (
-          <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap break-words font-normal">
-            {post.content}
-          </p>
+          <div className="space-y-3">
+            <p className="text-sm text-[#F5F5F3] leading-relaxed whitespace-pre-wrap break-words font-normal">
+              {post.content}
+            </p>
+
+            {/* LINK ATTACHMENT CARD */}
+            {post.link_url && (
+              <a
+                href={post.link_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block group rounded-xl border border-white/[0.08] bg-white/[0.015] hover:bg-white/[0.04] hover:border-white/20 transition-all overflow-hidden"
+              >
+                {post.link_image && (
+                  <img
+                    src={post.link_image}
+                    alt={post.link_title || "Link preview"}
+                    className="w-full h-40 object-cover border-b border-white/[0.08]"
+                  />
+                )}
+                <div className="p-3.5 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-mono text-[#8A8A8A] flex items-center gap-1">
+                      <Globe className="h-3 w-3" />
+                      {getDomain(post.link_url)}
+                    </span>
+                    <ExternalLink className="h-3 w-3 text-[#8A8A8A] group-hover:text-white transition-colors" />
+                  </div>
+                  <h4 className="text-xs font-semibold text-[#F5F5F3] group-hover:text-white transition-colors line-clamp-1">
+                    {post.link_title || post.link_url}
+                  </h4>
+                  {post.link_description && (
+                    <p className="text-[11px] text-[#8A8A8A] line-clamp-2 leading-relaxed">
+                      {post.link_description}
+                    </p>
+                  )}
+                </div>
+              </a>
+            )}
+
+            {/* MEDIA ATTACHMENT (IMAGE / VIDEO) */}
+            {post.media_url && (
+              <div className="rounded-xl overflow-hidden border border-white/[0.08] bg-black">
+                {post.media_type === "video" ? (
+                  <video
+                    src={post.media_url}
+                    controls
+                    preload="metadata"
+                    className="w-full max-h-96 object-contain"
+                  />
+                ) : (
+                  <img
+                    src={post.media_url}
+                    alt="Attached post media"
+                    className="w-full max-h-96 object-cover"
+                  />
+                )}
+              </div>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>
   );
 }
-

@@ -52,6 +52,12 @@ class PostService:
             author_id=author_id,
             activity_type=data.activity_type.value,
             content=data.content,
+            media_url=data.media_url,
+            media_type=data.media_type,
+            link_url=data.link_url,
+            link_title=data.link_title,
+            link_description=data.link_description,
+            link_image=data.link_image,
         )
         db.add(post)
         db.commit()
@@ -64,6 +70,12 @@ class PostService:
             author_id=post.author_id,
             activity_type=ActivityType(post.activity_type),
             content=post.content,
+            media_url=post.media_url,
+            media_type=post.media_type,
+            link_url=post.link_url,
+            link_title=post.link_title,
+            link_description=post.link_description,
+            link_image=post.link_image,
             author=_build_author_public(profile, author_id),
             created_at=post.created_at,
             updated_at=post.updated_at,
@@ -108,6 +120,12 @@ class PostService:
                     author_id=p.author_id,
                     activity_type=ActivityType(p.activity_type),
                     content=p.content,
+                    media_url=p.media_url,
+                    media_type=p.media_type,
+                    link_url=p.link_url,
+                    link_title=p.link_title,
+                    link_description=p.link_description,
+                    link_image=p.link_image,
                     author=_build_author_public(author_prof, p.author_id),
                     created_at=p.created_at,
                     updated_at=p.updated_at,
@@ -151,6 +169,12 @@ class PostService:
                 author_id=p.author_id,
                 activity_type=ActivityType(p.activity_type),
                 content=p.content,
+                media_url=p.media_url,
+                media_type=p.media_type,
+                link_url=p.link_url,
+                link_title=p.link_title,
+                link_description=p.link_description,
+                link_image=p.link_image,
                 author=author_public,
                 created_at=p.created_at,
                 updated_at=p.updated_at,
@@ -183,6 +207,19 @@ class PostService:
             raise UnauthorizedPostActionException("You can only edit your own posts.")
 
         post.content = data.content
+        if data.media_url is not None:
+            post.media_url = data.media_url
+        if data.media_type is not None:
+            post.media_type = data.media_type
+        if data.link_url is not None:
+            post.link_url = data.link_url
+        if data.link_title is not None:
+            post.link_title = data.link_title
+        if data.link_description is not None:
+            post.link_description = data.link_description
+        if data.link_image is not None:
+            post.link_image = data.link_image
+
         db.commit()
         db.refresh(post)
 
@@ -194,6 +231,12 @@ class PostService:
             author_id=post.author_id,
             activity_type=ActivityType(post.activity_type),
             content=post.content,
+            media_url=post.media_url,
+            media_type=post.media_type,
+            link_url=post.link_url,
+            link_title=post.link_title,
+            link_description=post.link_description,
+            link_image=post.link_image,
             author=_build_author_public(profile, post.author_id),
             created_at=post.created_at,
             updated_at=post.updated_at,

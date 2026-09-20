@@ -1,5 +1,16 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import health, profile, activity, discover, connection, post, feed, conversation, notification
+from app.api.v1.endpoints import (
+    health,
+    profile,
+    activity,
+    discover,
+    connection,
+    post,
+    feed,
+    conversation,
+    notification,
+    media,
+)
 
 api_router = APIRouter()
 
@@ -12,4 +23,4 @@ api_router.include_router(post.router)
 api_router.include_router(feed.router)
 api_router.include_router(conversation.router)
 api_router.include_router(notification.router)
-
+api_router.include_router(media.router)

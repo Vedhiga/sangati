@@ -4,34 +4,34 @@
 
 @layer base {
   :root {
-    /* Technical Dark Futuristic Palette */
-    --background: 240 25% 3.5%;
-    --foreground: 210 40% 98%;
+    /* Art-Directed Dark Editorial Palette */
+    --background: 0 0% 4%; /* #0A0A0A */
+    --foreground: 60 4% 95%; /* #F5F5F3 */
 
-    --card: 240 20% 6%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 7%; /* #121212 */
+    --card-foreground: 60 4% 95%;
 
-    --popover: 240 20% 6%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 60 4% 95%;
 
-    --primary: 0 0% 100%;
-    --primary-foreground: 240 25% 3.5%;
+    --primary: 0 0% 96%;
+    --primary-foreground: 0 0% 5%;
 
-    --secondary: 240 16% 12%;
-    --secondary-foreground: 210 40% 95%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 90%;
 
-    --muted: 240 14% 12%;
-    --muted-foreground: 215 15% 62%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 54%; /* #8A8A8A */
 
-    --accent: 240 20% 16%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 0 0% 16%;
+    --accent-foreground: 60 4% 95%;
 
     --destructive: 345 75% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 15% 12%;
-    --input: 240 15% 12%;
-    --ring: 210 40% 98%;
+    --border: 0 0% 14%; /* rgba(255, 255, 255, 0.08) */
+    --input: 0 0% 14%;
+    --ring: 0 0% 96%;
 
     --radius: 0.75rem;
   }
@@ -42,106 +42,99 @@
     @apply border-border;
   }
   body {
-    @apply bg-[#040407] text-foreground antialiased min-h-screen selection:bg-white/20 selection:text-white;
+    @apply bg-[#0A0A0A] text-[#F5F5F3] antialiased min-h-screen selection:bg-white/20 selection:text-white overflow-x-hidden;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
 
-/* Custom Editorial Technical Scrollbar */
+/* Custom Editorial Scrollbar */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #0A0A0A;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.25);
 }
 
-/* Technical Grid Overlay */
+/* Subtle Geometric Architectural Grid */
 .bg-sangati-grid {
-  background-size: 50px 50px;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-}
-
-.bg-sangati-grid-dense {
-  background-size: 24px 24px;
+  background-size: 60px 60px;
   background-image: 
     linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
 }
 
-/* Ambient Radial Glows */
-.bg-sangati-glow-top {
-  background: radial-gradient(
-    circle at 50% -10%,
-    rgba(120, 119, 198, 0.14) 0%,
-    rgba(99, 102, 241, 0.06) 40%,
-    transparent 70%
-  );
+.bg-sangati-grid-dense {
+  background-size: 24px 24px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
 }
 
+/* Ambient Radial Lighting */
 .bg-sangati-glow-hero {
   background: radial-gradient(
-    ellipse 80% 50% at 50% -20%,
-    rgba(120, 119, 198, 0.18),
-    rgba(255, 255, 255, 0)
+    circle at 70% 30%,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(140, 140, 160, 0.02) 40%,
+    transparent 70%
   );
 }
 
 .bg-sangati-ambient {
   background: radial-gradient(
     ellipse 100% 60% at 50% -10%,
-    rgba(25 26 42 / 0.5) 0%,
-    rgba(4, 4, 7, 1) 80%
+    rgba(20, 20, 25, 0.6) 0%,
+    rgba(10, 10, 10, 1) 80%
   );
 }
 
-/* Glassmorphism & Translucent Surfaces */
+/* Editorial Translucent Surfaces */
 .bg-sangati-glass {
-  background: rgba(10, 11, 18, 0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .bg-sangati-glass-hover {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .bg-sangati-glass-hover:hover {
-  background: rgba(16, 17, 28, 0.85);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-2px);
 }
 
 .border-sangati-subtle {
-  border-color: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .text-sangati-muted {
-  color: rgba(255, 255, 255, 0.55);
+  color: #8A8A8A;
 }
 
 .bg-sangati-card {
-  background: rgba(12, 13, 21, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Technical Accent Lines & Micro Elements */
+/* Subtle Geometric Accent Rules */
 .geometric-line-h {
   height: 1px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.08) 30%,
+    rgba(255, 255, 255, 0.06) 20%,
     rgba(255, 255, 255, 0.12) 50%,
-    rgba(255, 255, 255, 0.08) 70%,
+    rgba(255, 255, 255, 0.06) 80%,
     transparent 100%
   );
 }
@@ -151,18 +144,18 @@
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.08) 30%,
+    rgba(255, 255, 255, 0.06) 20%,
     rgba(255, 255, 255, 0.12) 50%,
-    rgba(255, 255, 255, 0.08) 70%,
+    rgba(255, 255, 255, 0.06) 80%,
     transparent 100%
   );
 }
 
-/* Animations */
+/* Tubik Motion Choreography */
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -170,7 +163,7 @@
   }
 }
 
-@keyframes glowPulse {
+@keyframes gridShimmer {
   0%, 100% {
     opacity: 0.4;
   }
@@ -180,9 +173,16 @@
 }
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.animate-glow-pulse {
-  animation: glowPulse 4s ease-in-out infinite;
+.animate-grid-shimmer {
+  animation: gridShimmer 6s ease-in-out infinite;
 }
+
+/* Stagger delay utility classes */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }

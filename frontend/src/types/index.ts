@@ -125,6 +125,12 @@ export interface Post {
   author_id: string;
   activity_type: ActivityType;
   content: string;
+  media_url?: string | null;
+  media_type?: string | null;
+  link_url?: string | null;
+  link_title?: string | null;
+  link_description?: string | null;
+  link_image?: string | null;
   author: AuthorPublic;
   created_at: string;
   updated_at: string;
@@ -133,10 +139,22 @@ export interface Post {
 export interface PostCreate {
   activity_type: ActivityType;
   content: string;
+  media_url?: string | null;
+  media_type?: string | null;
+  link_url?: string | null;
+  link_title?: string | null;
+  link_description?: string | null;
+  link_image?: string | null;
 }
 
 export interface PostUpdate {
   content: string;
+  media_url?: string | null;
+  media_type?: string | null;
+  link_url?: string | null;
+  link_title?: string | null;
+  link_description?: string | null;
+  link_image?: string | null;
 }
 
 export interface PostsListResponse {
@@ -214,6 +232,10 @@ export interface ConversationDetail {
 export interface GroupConversationCreate {
   participant_user_ids: string[];
   title?: string;
+}
+
+export interface UnreadCountResponse {
+  count: number;
 }
 
 // Module 8: Notifications
