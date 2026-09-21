@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import Avatar from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export interface ElasticStackItem {
   id: string;
@@ -48,11 +48,10 @@ export function ElasticStack({ items, onSwipe, className }: ElasticStackProps) {
     <div className={cn("relative w-full max-w-sm h-80 flex items-center justify-center mx-auto", className)}>
       <AnimatePresence>
         {stack.map((item, index) => {
-          // Top card is last in rendered array or top of stack (index 0)
           const isTop = index === 0;
-          const displayIndex = index; // 0, 1, 2...
+          const displayIndex = index;
 
-          if (displayIndex > 3) return null; // render top 4 cards only
+          if (displayIndex > 3) return null;
 
           return (
             <ElasticCard
@@ -87,9 +86,10 @@ function ElasticCard({ item, index, isTop, onSwipe }: ElasticCardProps) {
     }
   };
 
-  // Stack offset styling
   const yOffset = index * 12;
   const scale = 1 - index * 0.05;
+
+  const initials = (item.name || "U")[0].toUpperCase();
 
   return (
     <motion.div
@@ -116,12 +116,12 @@ function ElasticCard({ item, index, isTop, onSwipe }: ElasticCardProps) {
       )}
     >
       <div className="flex items-center space-x-4">
-        <Avatar
-          src={item.avatar_url || undefined}
-          fallback={(item.name || "U")[0].toUpperCase()}
-          size="lg"
-          className="border border-white/10"
-        />
+        <Avatar className="h-12 w-12 border border-white/10 shrink-0">
+          <AvatarImage src={item.avatar_url || undefined} alt={item.name} />
+          <AvatarFallback className="bg-zinc-800 text-zinc-200 text-sm font-semibold">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
         <div className="overflow-hidden">
           <h3 className="font-semibold text-zinc-100 text-lg leading-tight truncate">
             {item.name}
