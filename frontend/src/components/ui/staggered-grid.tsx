@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion, Variants } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Code, BookOpen, MessageSquare, Compass, ArrowUpRight, Sparkles } from "lucide-react";
@@ -88,7 +88,7 @@ const itemVariants: Variants = {
     y: 0,
     scale: 1,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 260,
       damping: 20,
     },
