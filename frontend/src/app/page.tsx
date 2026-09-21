@@ -27,12 +27,12 @@ export default function HomePage() {
 
   return (
     <div className="w-full space-y-20 sm:space-y-24 py-4 relative z-10">
-      {/* SECTION 1: Clean Editorial Hero (Without Center Shader Animation) */}
-      <section className="relative max-w-4xl mx-auto pt-6 pb-6 space-y-8 animate-fade-in-up">
+      {/* SECTION 1: Clean Editorial Hero */}
+      <section className="relative max-w-4xl mx-auto pt-6 pb-4 space-y-8 animate-fade-in-up">
         {/* Section Label */}
-        <div className="flex items-center gap-3 text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase select-none">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37] animate-ping" />
-          <span>01 / SANGATI DIGITAL ETHOS</span>
+        <div className="flex items-center gap-2.5 text-[11px] font-mono tracking-[0.2em] text-[#8A8A8A] uppercase select-none">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37]" />
+          <span>SANGATI DIGITAL ETHOS</span>
         </div>
 
         {/* Display Heading & Word Cycling */}
@@ -109,8 +109,8 @@ export default function HomePage() {
       {/* SECTION 2: Architecture Pipeline */}
       <section className="space-y-8">
         <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-          <TextAnimation as="span" className="text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase">
-            02 / PLATFORM ARCHITECTURE
+          <TextAnimation as="span" className="text-[11px] font-mono tracking-[0.2em] text-[#8A8A8A] uppercase">
+            PLATFORM ARCHITECTURE
           </TextAnimation>
           <span className="text-[11px] font-mono text-[#8A8A8A]">4-STAGE PIPELINE</span>
         </div>
@@ -126,7 +126,7 @@ export default function HomePage() {
               key={i}
               className="p-6 rounded-2xl bg-sangati-glass border border-white/[0.08] hover:border-white/20 transition-all duration-300 space-y-3 group"
             >
-              <span className="text-[11px] font-mono text-[#8A8A8A] block tracking-widest">{item.step}</span>
+              <span className="text-[11px] font-mono text-[#D4AF37] block tracking-widest font-semibold">{item.step}</span>
               <h3 className="text-sm font-medium text-[#F5F5F3] group-hover:text-white transition-colors">{item.title}</h3>
               <p className="text-xs text-[#8A8A8A] leading-relaxed font-normal">{item.desc}</p>
             </div>
@@ -137,16 +137,16 @@ export default function HomePage() {
       {/* Geometric Horizontal Line */}
       <div className="geometric-line-h w-full" />
 
-      {/* SECTION 3: Active Intent Staggered Bento Grid */}
+      {/* SECTION 3: Active Intent 2x2 Bento Grid */}
       <section className="space-y-8">
         <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-          <TextAnimation as="h2" className="text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase">
-            03 / CORE PILLARS & INTENTS
+          <TextAnimation as="h2" className="text-[11px] font-mono tracking-[0.2em] text-[#8A8A8A] uppercase">
+            CORE PILLARS & INTENTS
           </TextAnimation>
           {isAuthenticated && (
             <Link
               href="/activity"
-              className="text-xs text-[#F5F5F3] hover:text-white transition-colors flex items-center gap-1 font-mono tracking-wider"
+              className="text-xs text-[#F5F5F3] hover:text-[#D4AF37] transition-colors flex items-center gap-1 font-mono tracking-wider"
             >
               Configure intent →
             </Link>
@@ -156,12 +156,12 @@ export default function HomePage() {
         <StaggeredGrid />
       </section>
 
-      {/* SECTION 4: Transparent Feed Principles */}
-      <section className="p-8 sm:p-12 rounded-3xl bg-sangati-glass border border-white/[0.08] space-y-8">
+      {/* Geometric Horizontal Line */}
+      <div className="geometric-line-h w-full" />
+
+      {/* SECTION 4: Feed Calculation Section */}
+      <section className="space-y-8">
         <div className="space-y-2">
-          <span className="text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase">
-            04 / TRANSPARENT RANKING GUARANTEE
-          </span>
           <TextAnimation as="h2" className="text-2xl sm:text-3xl font-light text-[#F5F5F3] tracking-tight">
             How your feed is calculated
           </TextAnimation>
@@ -170,19 +170,22 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[
             { label: "Active Intent Alignment (+3.0)", text: "Matches what you're currently building or learning." },
             { label: "Mutual Connection (+3.0)", text: "Prioritizes posts from accepted mutual connections." },
             { label: "Topic Interest Overlap (+2.0)", text: "Calculated based on shared interest tags." },
             { label: "Smooth Recency Decay (+2.0)", text: "12-hour exponential half-life decay." },
           ].map((rule, idx) => (
-            <div key={idx} className="flex items-start gap-4 p-4 rounded-xl bg-white/[0.015] border border-white/[0.05]">
-              <CheckCircle2 className="h-5 w-5 text-[#D4AF37] shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-[#F5F5F3]">{rule.label}</p>
-                <p className="text-xs text-[#8A8A8A] leading-relaxed">{rule.text}</p>
+            <div
+              key={idx}
+              className="p-5 rounded-2xl bg-sangati-glass border border-white/[0.08] hover:border-white/20 transition-all duration-300 space-y-2"
+            >
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="h-4 w-4 text-[#D4AF37] shrink-0" />
+                <h3 className="text-sm font-semibold text-[#F5F5F3]">{rule.label}</h3>
               </div>
+              <p className="text-xs text-[#8A8A8A] leading-relaxed pl-6 font-normal">{rule.text}</p>
             </div>
           ))}
         </div>
