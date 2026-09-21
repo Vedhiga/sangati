@@ -107,7 +107,7 @@ function ElasticCard({ item, index, isTop, onSwipe }: ElasticCardProps) {
       drag={isTop ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
       onDragEnd={handleDragEnd}
-      whileGrab={{ cursor: "grabbing" }}
+      whileTap={{ cursor: "grabbing" }}
       className={cn(
         "absolute top-0 left-0 right-0 w-full h-72 rounded-2xl p-6 shadow-2xl flex flex-col justify-between select-none cursor-grab border backdrop-blur-xl transition-colors duration-300",
         isTop
