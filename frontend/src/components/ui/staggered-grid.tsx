@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Code, BookOpen, MessageSquare, Compass, ArrowUpRight, Sparkles } from "lucide-react";
@@ -13,7 +13,7 @@ export interface StaggeredGridItem {
   description: string;
   badge?: string;
   linkHref?: string;
-  colSpan?: string; // e.g. "col-span-1 md:col-span-2"
+  colSpan?: string;
   gradientOverlay?: string;
   icon?: React.ReactNode;
 }
@@ -70,7 +70,7 @@ const DEFAULT_PILLARS: StaggeredGridItem[] = [
   },
 ];
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -81,7 +81,7 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 24, scale: 0.97 },
   visible: {
     opacity: 1,
