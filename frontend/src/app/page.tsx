@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  ArrowRight,
   Layers,
   Users,
   CheckCircle2,
@@ -11,7 +10,6 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { LiquidMetalCanvas } from "@/components/ui/liquid-metal-canvas";
 import { FlipFadeText } from "@/components/ui/flip-fade-text";
 import { FlipText } from "@/components/ui/flip-text";
 import { TextAnimation } from "@/components/ui/text-animation";
@@ -28,87 +26,80 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="w-full space-y-24 py-4 relative z-10">
-      {/* SECTION 1: Asymmetric Motion-First Editorial Hero */}
-      <section className="relative grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center pt-4 pb-8">
-        {/* Left Column: Editorial Display Typography Stack */}
-        <div className="lg:col-span-7 space-y-8 animate-fade-in-up">
-          {/* Section Label */}
-          <div className="flex items-center gap-3 text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase select-none">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-            <span>01 / SANGATI DIGITAL ETHOS</span>
-          </div>
+    <div className="w-full space-y-20 sm:space-y-24 py-4 relative z-10">
+      {/* SECTION 1: Clean Editorial Hero (Without Center Shader Animation) */}
+      <section className="relative max-w-4xl mx-auto pt-6 pb-6 space-y-8 animate-fade-in-up">
+        {/* Section Label */}
+        <div className="flex items-center gap-3 text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase select-none">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37] animate-ping" />
+          <span>01 / SANGATI DIGITAL ETHOS</span>
+        </div>
 
-          {/* Display Heading with Word Cycling */}
-          <div className="space-y-2">
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-light tracking-tight text-[#F5F5F3] leading-[1.06]">
-              Discover people who{" "}
-              <FlipText className="font-serif italic text-white font-normal underline decoration-white/20 underline-offset-[8px]">
-                differently
-              </FlipText>
-              .
-            </h1>
-            <div className="pt-2">
-              <p className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-1">
-                Active Intent Mode:
-              </p>
-              <FlipFadeText
-                words={["BUILD", "LEARN", "CONVERSATION", "EXPLORE"]}
-                className="justify-start min-h-[60px]"
-                textClassName="text-3xl sm:text-5xl font-extrabold text-emerald-400 tracking-wider"
-              />
-            </div>
-          </div>
+        {/* Display Heading & Word Cycling */}
+        <div className="space-y-4">
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-light tracking-tight text-[#F5F5F3] leading-[1.06]">
+            Discover people who{" "}
+            <FlipText className="font-serif italic text-white font-normal underline decoration-white/20 underline-offset-[8px]">
+              differently
+            </FlipText>
+            .
+          </h1>
 
-          {/* Supporting Editorial Paragraph */}
-          <p className="text-base sm:text-lg text-[#8A8A8A] leading-relaxed max-w-xl font-normal">
-            A quiet, intentional community built around what you&apos;re currently building, learning, discussing, or exploring — without vanity metrics or noise.
-          </p>
-
-          {/* Hero CTAs */}
-          <div className="flex flex-wrap items-center gap-4 pt-2">
-            {isAuthenticated ? (
-              <>
-                <Link href="/feed">
-                  <LiquidMetalButton size="md" icon={<Layers className="w-4 h-4" />}>
-                    Explore Personal Feed
-                  </LiquidMetalButton>
-                </Link>
-                <Link href="/discover">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="gap-2.5 px-6 border-white/10 bg-white/[0.02] text-[#F5F5F3] hover:bg-white/[0.06] hover:border-white/20 text-xs rounded-full transition-all duration-300 h-11"
-                  >
-                    <Users className="h-4 w-4" />
-                    <span>Discover People</span>
-                  </Button>
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link href="/signup">
-                  <LiquidMetalButton size="lg" icon={<Sparkles className="w-4 h-4 text-emerald-400" />}>
-                    Get Started with Sangati
-                  </LiquidMetalButton>
-                </Link>
-                <Link href="/login">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="px-8 border-white/10 bg-white/[0.02] text-[#F5F5F3] hover:bg-white/[0.06] hover:border-white/20 text-xs rounded-full transition-all duration-300 h-12"
-                  >
-                    <span>Sign in</span>
-                  </Button>
-                </Link>
-              </>
-            )}
+          <div className="pt-2">
+            <p className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-2">
+              Active Intent Mode:
+            </p>
+            <FlipFadeText
+              words={["BUILD", "LEARN", "CONVERSATION", "EXPLORE"]}
+              className="justify-start min-h-[60px]"
+              textClassName="text-3xl sm:text-5xl md:text-6xl font-extrabold text-[#D4AF37] tracking-wider"
+            />
           </div>
         </div>
 
-        {/* Right Column: Floating 3D Liquid Metal Canvas */}
-        <div className="lg:col-span-5 relative flex items-center justify-center min-h-[340px]">
-          <LiquidMetalCanvas className="w-full h-full min-h-[340px]" />
+        {/* Supporting Editorial Paragraph */}
+        <p className="text-base sm:text-lg text-[#8A8A8A] leading-relaxed max-w-2xl font-normal">
+          A quiet, intentional community built around what you&apos;re currently building, learning, discussing, or exploring — without vanity metrics or noise.
+        </p>
+
+        {/* Hero CTAs */}
+        <div className="flex flex-wrap items-center gap-4 pt-2">
+          {isAuthenticated ? (
+            <>
+              <Link href="/feed">
+                <LiquidMetalButton size="md" icon={<Layers className="w-4 h-4" />}>
+                  Explore Personal Feed
+                </LiquidMetalButton>
+              </Link>
+              <Link href="/discover">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="gap-2.5 px-6 border-white/10 bg-white/[0.02] text-[#F5F5F3] hover:bg-white/[0.06] hover:border-white/20 text-xs rounded-full transition-all duration-300 h-11"
+                >
+                  <Users className="h-4 w-4" />
+                  <span>Discover People</span>
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/signup">
+                <LiquidMetalButton size="lg" icon={<Sparkles className="w-4 h-4 text-[#D4AF37]" />}>
+                  Get Started with Sangati
+                </LiquidMetalButton>
+              </Link>
+              <Link href="/login">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="px-8 border-white/10 bg-white/[0.02] text-[#F5F5F3] hover:bg-white/[0.06] hover:border-white/20 text-xs rounded-full transition-all duration-300 h-12"
+                >
+                  <span>Sign in</span>
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </section>
 
@@ -187,7 +178,7 @@ export default function HomePage() {
             { label: "Smooth Recency Decay (+2.0)", text: "12-hour exponential half-life decay." },
           ].map((rule, idx) => (
             <div key={idx} className="flex items-start gap-4 p-4 rounded-xl bg-white/[0.015] border border-white/[0.05]">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+              <CheckCircle2 className="h-5 w-5 text-[#D4AF37] shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <p className="text-xs font-medium text-[#F5F5F3]">{rule.label}</p>
                 <p className="text-xs text-[#8A8A8A] leading-relaxed">{rule.text}</p>

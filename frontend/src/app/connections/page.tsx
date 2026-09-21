@@ -34,6 +34,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ElasticStack, ElasticStackItem } from "@/components/ui/elastic-stack";
+import { LiquidMetalButton } from "@/components/ui/liquid-metal";
 
 interface ActivityMeta {
   type: ActivityType;
@@ -301,19 +302,15 @@ export default function ConnectionsPage() {
                   )}
 
                   <div className="flex items-center gap-2 pt-1 border-t border-white/10">
-                    <Button
+                    <LiquidMetalButton
                       size="sm"
                       disabled={processingId === req.id}
                       onClick={() => handleAccept(req.id)}
-                      className="flex-1 h-7 text-xs font-medium bg-white text-black hover:bg-slate-200 gap-1"
+                      icon={processingId === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                      className="flex-1"
                     >
-                      {processingId === req.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Check className="h-3 w-3" />
-                      )}
-                      <span>Accept</span>
-                    </Button>
+                      Accept
+                    </LiquidMetalButton>
                     <Button
                       size="sm"
                       variant="outline"

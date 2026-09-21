@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { LiquidMetalButton } from "@/components/ui/liquid-metal";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -132,20 +133,15 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full mt-2 bg-zinc-100 text-zinc-950 hover:bg-zinc-200 rounded-xl text-xs font-semibold py-2.5 shadow-md transition-all" 
+            <LiquidMetalButton
+              type="submit"
               disabled={isLoading}
+              size="md"
+              className="w-full mt-2"
+              icon={isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Logging in...
-                </>
-              ) : (
-                "Log in to Sangati →"
-              )}
-            </Button>
+              {isLoading ? "Logging in..." : "Log in to Sangati →"}
+            </LiquidMetalButton>
           </form>
         </CardContent>
 

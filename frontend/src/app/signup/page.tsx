@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { LiquidMetalButton } from "@/components/ui/liquid-metal";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -179,20 +180,15 @@ export default function SignupPage() {
               </div>
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full mt-2 bg-zinc-100 text-zinc-950 hover:bg-zinc-200 rounded-xl text-xs font-semibold py-2.5 shadow-md transition-all" 
+            <LiquidMetalButton
+              type="submit"
               disabled={isLoading}
+              size="md"
+              className="w-full mt-2"
+              icon={isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating account...
-                </>
-              ) : (
-                "Create Account →"
-              )}
-            </Button>
+              {isLoading ? "Creating account..." : "Create Account →"}
+            </LiquidMetalButton>
           </form>
         </CardContent>
 

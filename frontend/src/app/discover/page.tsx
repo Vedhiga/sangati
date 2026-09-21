@@ -27,6 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TextAnimation } from "@/components/ui/text-animation";
+import { LiquidMetalButton } from "@/components/ui/liquid-metal";
 
 interface ActivityMeta {
   type: ActivityType;
@@ -564,20 +565,20 @@ function DiscoverContent() {
                         </Button>
                       </div>
                     ) : (
-                      <Button
+                      <LiquidMetalButton
                         size="sm"
-                        variant="outline"
                         disabled={actionInProgressId === person.user_id}
                         onClick={() => handleSendConnect(person)}
-                        className="h-7 px-3 text-xs gap-1.5 bg-white text-black hover:bg-slate-200 font-medium border-white border"
+                        icon={
+                          actionInProgressId === person.user_id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <UserPlus className="h-3.5 w-3.5" />
+                          )
+                        }
                       >
-                        {actionInProgressId === person.user_id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <UserPlus className="h-3.5 w-3.5" />
-                        )}
-                        <span>Connect</span>
-                      </Button>
+                        Connect
+                      </LiquidMetalButton>
                     )}
                   </div>
                 </Card>

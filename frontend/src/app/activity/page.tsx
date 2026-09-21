@@ -9,6 +9,7 @@ import { api, ApiClientError } from "@/lib/api";
 import { ActivityType, UserActivity } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { LiquidMetalButton } from "@/components/ui/liquid-metal";
 
 interface ActivityOption {
   type: ActivityType;
@@ -216,28 +217,22 @@ export default function ActivityPage() {
           </Button>
         </Link>
 
-        <Button
+        <LiquidMetalButton
           onClick={handleSave}
           disabled={!selectedActivity || isSaving}
-          className="gap-2 px-6 bg-white text-black hover:bg-slate-200 font-medium min-w-[160px]"
-        >
-          {isSaving ? (
-            <>
+          size="md"
+          icon={
+            isSaving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Saving...</span>
-            </>
-          ) : savedSuccess ? (
-            <>
+            ) : savedSuccess ? (
               <Check className="h-4 w-4" />
-              <span>Saved!</span>
-            </>
-          ) : (
-            <>
-              <span>Discover People</span>
+            ) : (
               <ArrowRight className="h-4 w-4" />
-            </>
-          )}
-        </Button>
+            )
+          }
+        >
+          {isSaving ? "Saving..." : savedSuccess ? "Saved!" : "Discover People"}
+        </LiquidMetalButton>
       </div>
     </div>
   );

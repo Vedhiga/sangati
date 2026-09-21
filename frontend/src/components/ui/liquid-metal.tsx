@@ -77,16 +77,18 @@ export const LiquidMetalButton = forwardRef<
     },
     ref
   ) => {
+    const isFullWidth = className?.includes("w-full");
+
     const sizeStyles = {
-      sm: "py-2 pl-3 pr-5 gap-2.5 text-xs font-medium",
-      md: "py-2.5 pl-3.5 pr-6 gap-3 text-sm font-medium",
-      lg: "py-3.5 pl-4 pr-8 gap-4 text-base font-semibold",
+      sm: icon ? "py-1.5 pl-2.5 pr-4 gap-2 text-xs font-medium" : "py-1.5 px-4 text-xs font-medium",
+      md: icon ? "py-2 pl-3 pr-5 gap-2.5 text-sm font-medium" : "py-2 px-5 text-sm font-medium",
+      lg: icon ? "py-3 pl-3.5 pr-6 gap-3 text-base font-semibold" : "py-3 px-6 text-base font-semibold",
     };
 
     const iconSizes = {
-      sm: "w-6 h-6 text-xs",
-      md: "w-8 h-8 text-sm",
-      lg: "w-10 h-10 text-base",
+      sm: "w-5 h-5 text-xs",
+      md: "w-7 h-7 text-sm",
+      lg: "w-9 h-9 text-base",
     };
 
     return (
@@ -100,7 +102,10 @@ export const LiquidMetalButton = forwardRef<
         {...props}
       >
         <div
-          className="relative rounded-full overflow-hidden shadow-[0_12px_32px_-8px_rgba(0,0,0,0.5)] transition-shadow duration-300 group-hover:shadow-[0_16px_40px_-6px_rgba(255,255,255,0.15)]"
+          className={cn(
+            "relative rounded-full overflow-hidden shadow-[0_12px_32px_-8px_rgba(0,0,0,0.5)] transition-shadow duration-300 group-hover:shadow-[0_16px_40px_-6px_rgba(255,255,255,0.15)]",
+            isFullWidth && "w-full"
+          )}
           style={{ padding: borderWidth }}
         >
           {/* Liquid Metal Shader Border */}
@@ -122,6 +127,7 @@ export const LiquidMetalButton = forwardRef<
               "border border-white/10",
               "transition-all duration-300",
               "group-hover:bg-[#141416] group-hover:border-white/25",
+              isFullWidth && "w-full",
               sizeStyles[size]
             )}
           >

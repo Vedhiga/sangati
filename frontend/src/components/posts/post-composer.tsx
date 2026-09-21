@@ -20,6 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { LiquidMetalButton } from "@/components/ui/liquid-metal";
 
 interface PostComposerProps {
   defaultActivity?: ActivityType | null;
@@ -424,19 +425,14 @@ export function PostComposer({ defaultActivity, onPostCreated }: PostComposerPro
                   {content.length}/{MAX_CHARS}
                 </span>
 
-                <Button
+                <LiquidMetalButton
                   type="submit"
                   size="sm"
                   disabled={isPostDisabled}
-                  className="h-8 px-4 text-xs font-medium gap-1.5 bg-[#F5F5F3] text-[#0A0A0A] hover:bg-white rounded-full shadow-lg transition-all"
+                  icon={isSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                 >
-                  {isSubmitting ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Send className="h-3.5 w-3.5" />
-                  )}
-                  <span>Post</span>
-                </Button>
+                  {isSubmitting ? "Posting..." : "Post"}
+                </LiquidMetalButton>
               </div>
             </div>
           </div>

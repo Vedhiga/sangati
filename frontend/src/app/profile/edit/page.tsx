@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { LiquidMetalButton } from "@/components/ui/liquid-metal";
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -235,20 +236,14 @@ export default function EditProfilePage() {
                   Cancel
                 </Button>
               </Link>
-              <Button 
-                type="submit" 
+              <LiquidMetalButton
+                type="submit"
                 disabled={isSaving}
-                className="bg-zinc-100 text-zinc-950 hover:bg-zinc-200 rounded-xl text-xs font-semibold px-5 shadow-md"
+                size="sm"
+                icon={isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : undefined}
               >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Changes"
-                )}
-              </Button>
+                {isSaving ? "Saving..." : "Save Changes"}
+              </LiquidMetalButton>
             </div>
           </form>
         </CardContent>
