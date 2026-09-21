@@ -14,9 +14,9 @@ import {
   Check,
   X,
   Loader2,
-  Compass,
   ArrowRight,
   AlertCircle,
+  Layers,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { api, ApiClientError } from "@/lib/api";
@@ -33,6 +33,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ElasticStack, ElasticStackItem } from "@/components/ui/elastic-stack";
 
 interface ActivityMeta {
   type: ActivityType;
@@ -78,6 +79,7 @@ export default function ConnectionsPage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [startingConvoUserId, setStartingConvoUserId] = useState<string | null>(null);
+  const [showStackView, setShowStackView] = useState(false);
 
   useEffect(() => {
     async function loadAllConnections() {
@@ -183,13 +185,37 @@ export default function ConnectionsPage() {
     }
   };
 
+  // Convert connected items to ElasticStack format
+  const stackItems: ElasticStackItem[] = connections.map((c) => ({
+    id: c.user.user_id,
+    name: c.user.display_name,
+    handle: c.user.username,
+    avatar_url: c.user.avatar_url,
+    headline: c.user.activity ? `Currently ${c.user.activity.toLowerCase()}` : "Connected Member",
+    bio: c.user.bio,
+  }));
+
   return (
     <div className="w-full space-y-8 py-2">
       {/* Header */}
       <div className="space-y-1 border-b border-white/10 pb-4">
-        <div className="flex items-center gap-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">
-          <UserCheck className="h-3.5 w-3.5 text-amber-400" />
-          <span>Your Network</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">
+            <UserCheck className="h-3.5 w-3.5 text-amber-400" />
+            <span>Your Network</span>
+          </div>
+
+          {connections.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowStackView(!showStackView)}
+              className="h-7 text-xs gap-1.5 border-white/10 bg-white/5 text-[#F5F5F3]"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>{showStackView ? "Grid View" : "Stack View"}</span>
+            </Button>
+          )}
         </div>
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">
           Connections
@@ -350,6 +376,13 @@ export default function ConnectionsPage() {
               </Button>
             </Link>
           </div>
+        ) : showStackView ? (
+          <div className="py-6">
+            <ElasticStack
+              items={stackItems}
+              onSwipe={(item) => handleStartMessage(item.id)}
+            />
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {connections.map((item) => {
@@ -448,4 +481,3 @@ export default function ConnectionsPage() {
     </div>
   );
 }
-

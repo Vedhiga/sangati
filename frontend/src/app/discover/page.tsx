@@ -26,6 +26,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TextAnimation } from "@/components/ui/text-animation";
 
 interface ActivityMeta {
   type: ActivityType;
@@ -235,9 +236,9 @@ function DiscoverContent() {
           <Compass className="h-3.5 w-3.5 text-amber-400" />
           <span>People Discovery</span>
         </div>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">
+        <TextAnimation as="h1" className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">
           Discover
-        </h1>
+        </TextAnimation>
         <p className="text-xs text-slate-400">
           Find people who share your active curiosity and interests.
         </p>
@@ -627,4 +628,3 @@ export default function DiscoverPage() {
     </Suspense>
   );
 }
-

@@ -4,17 +4,19 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   ArrowRight,
-  Hammer,
-  Brain,
-  MessageSquare,
-  Sparkles,
-  Users,
   Layers,
+  Users,
   CheckCircle2,
+  Sparkles,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { LiquidMetalCanvas } from "@/components/ui/liquid-metal-canvas";
+import { FlipFadeText } from "@/components/ui/flip-fade-text";
+import { FlipText } from "@/components/ui/flip-text";
+import { TextAnimation } from "@/components/ui/text-animation";
+import { StaggeredGrid } from "@/components/ui/staggered-grid";
+import { LiquidMetalButton } from "@/components/ui/liquid-metal";
 
 export default function HomePage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -33,21 +35,34 @@ export default function HomePage() {
         <div className="lg:col-span-7 space-y-8 animate-fade-in-up">
           {/* Section Label */}
           <div className="flex items-center gap-3 text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase select-none">
-            <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping" />
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
             <span>01 / SANGATI DIGITAL ETHOS</span>
           </div>
 
-          {/* Display Heading with Refined Editorial Weight & Italic Treatment */}
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-light tracking-tight text-[#F5F5F3] leading-[1.06]">
-            Discover people who think{" "}
-            <span className="font-serif italic font-normal text-white underline decoration-white/20 underline-offset-[12px] inline-block">
-              differently.
-            </span>
-          </h1>
+          {/* Display Heading with Word Cycling */}
+          <div className="space-y-2">
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-light tracking-tight text-[#F5F5F3] leading-[1.06]">
+              Discover people who{" "}
+              <FlipText className="font-serif italic text-white font-normal underline decoration-white/20 underline-offset-[8px]">
+                differently
+              </FlipText>
+              .
+            </h1>
+            <div className="pt-2">
+              <p className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-1">
+                Active Intent Mode:
+              </p>
+              <FlipFadeText
+                words={["BUILD", "LEARN", "CONVERSATION", "EXPLORE"]}
+                className="justify-start min-h-[60px]"
+                textClassName="text-3xl sm:text-5xl font-extrabold text-emerald-400 tracking-wider"
+              />
+            </div>
+          </div>
 
           {/* Supporting Editorial Paragraph */}
           <p className="text-base sm:text-lg text-[#8A8A8A] leading-relaxed max-w-xl font-normal">
-            A quiet, intentional platform built around what you&apos;re currently building, learning, discussing, or exploring — without vanity metrics, noise, or algorithms.
+            A quiet, intentional community built around what you&apos;re currently building, learning, discussing, or exploring — without vanity metrics or noise.
           </p>
 
           {/* Hero CTAs */}
@@ -55,19 +70,15 @@ export default function HomePage() {
             {isAuthenticated ? (
               <>
                 <Link href="/feed">
-                  <Button
-                    size="lg"
-                    className="gap-3 px-8 bg-[#F5F5F3] text-[#0A0A0A] hover:bg-white font-medium text-xs rounded-full shadow-2xl transition-all duration-300 hover:scale-105"
-                  >
-                    <Layers className="h-4 w-4" />
-                    <span>Personal Feed</span>
-                  </Button>
+                  <LiquidMetalButton size="md" icon={<Layers className="w-4 h-4" />}>
+                    Explore Personal Feed
+                  </LiquidMetalButton>
                 </Link>
                 <Link href="/discover">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="gap-3 px-8 border-white/10 bg-white/[0.02] text-[#F5F5F3] hover:bg-white/[0.06] hover:border-white/20 text-xs rounded-full transition-all duration-300"
+                    className="gap-2.5 px-6 border-white/10 bg-white/[0.02] text-[#F5F5F3] hover:bg-white/[0.06] hover:border-white/20 text-xs rounded-full transition-all duration-300 h-11"
                   >
                     <Users className="h-4 w-4" />
                     <span>Discover People</span>
@@ -77,19 +88,15 @@ export default function HomePage() {
             ) : (
               <>
                 <Link href="/signup">
-                  <Button
-                    size="lg"
-                    className="gap-3 px-8 bg-[#F5F5F3] text-[#0A0A0A] hover:bg-white font-medium text-xs rounded-full shadow-2xl transition-all duration-300 hover:scale-105"
-                  >
-                    <span>Join Sangati</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
+                  <LiquidMetalButton size="lg" icon={<Sparkles className="w-4 h-4 text-emerald-400" />}>
+                    Get Started with Sangati
+                  </LiquidMetalButton>
                 </Link>
                 <Link href="/login">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="px-8 border-white/10 bg-white/[0.02] text-[#F5F5F3] hover:bg-white/[0.06] hover:border-white/20 text-xs rounded-full transition-all duration-300"
+                    className="px-8 border-white/10 bg-white/[0.02] text-[#F5F5F3] hover:bg-white/[0.06] hover:border-white/20 text-xs rounded-full transition-all duration-300 h-12"
                   >
                     <span>Sign in</span>
                   </Button>
@@ -99,9 +106,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Right Column: Floating Unconstrained 3D Liquid Metal Sculpture */}
-        <div className="lg:col-span-5 relative flex items-center justify-center animate-fade-in-up delay-300">
-          <LiquidMetalCanvas className="w-full h-full" />
+        {/* Right Column: Floating 3D Liquid Metal Canvas */}
+        <div className="lg:col-span-5 relative flex items-center justify-center min-h-[340px]">
+          <LiquidMetalCanvas className="w-full h-full min-h-[340px]" />
         </div>
       </section>
 
@@ -109,11 +116,11 @@ export default function HomePage() {
       <div className="geometric-line-h w-full" />
 
       {/* SECTION 2: Architecture Pipeline */}
-      <section className="space-y-8 animate-fade-in-up delay-200">
+      <section className="space-y-8">
         <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-          <span className="text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase">
+          <TextAnimation as="span" className="text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase">
             02 / PLATFORM ARCHITECTURE
-          </span>
+          </TextAnimation>
           <span className="text-[11px] font-mono text-[#8A8A8A]">4-STAGE PIPELINE</span>
         </div>
 
@@ -139,12 +146,12 @@ export default function HomePage() {
       {/* Geometric Horizontal Line */}
       <div className="geometric-line-h w-full" />
 
-      {/* SECTION 3: Active Intent Matrices */}
-      <section className="space-y-8 animate-fade-in-up delay-300">
+      {/* SECTION 3: Active Intent Staggered Bento Grid */}
+      <section className="space-y-8">
         <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-          <span className="text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase">
-            03 / INTENT MATRICES
-          </span>
+          <TextAnimation as="h2" className="text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase">
+            03 / CORE PILLARS & INTENTS
+          </TextAnimation>
           {isAuthenticated && (
             <Link
               href="/activity"
@@ -155,102 +162,18 @@ export default function HomePage() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <Link href={isAuthenticated ? "/activity" : "/signup"} className="block group">
-            <div className="p-8 rounded-2xl bg-sangati-glass border border-white/[0.08] hover:border-white/25 transition-all duration-300 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="h-10 w-10 rounded-xl bg-white/[0.04] border border-white/10 text-[#F5F5F3] flex items-center justify-center">
-                  <Hammer className="h-5 w-5" />
-                </div>
-                <span className="text-[10px] font-mono text-[#8A8A8A] border border-white/10 px-2.5 py-1 rounded-full uppercase tracking-widest">
-                  INTENT // 01
-                </span>
-              </div>
-              <div className="space-y-1.5">
-                <h3 className="font-medium text-base text-[#F5F5F3] group-hover:text-white transition-colors">
-                  Build
-                </h3>
-                <p className="text-xs text-[#8A8A8A] leading-relaxed">
-                  Projects, software, creative work, & open-source tools currently in active development.
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href={isAuthenticated ? "/activity" : "/signup"} className="block group">
-            <div className="p-8 rounded-2xl bg-sangati-glass border border-white/[0.08] hover:border-white/25 transition-all duration-300 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="h-10 w-10 rounded-xl bg-white/[0.04] border border-white/10 text-[#F5F5F3] flex items-center justify-center">
-                  <Brain className="h-5 w-5" />
-                </div>
-                <span className="text-[10px] font-mono text-[#8A8A8A] border border-white/10 px-2.5 py-1 rounded-full uppercase tracking-widest">
-                  INTENT // 02
-                </span>
-              </div>
-              <div className="space-y-1.5">
-                <h3 className="font-medium text-base text-[#F5F5F3] group-hover:text-white transition-colors">
-                  Learn
-                </h3>
-                <p className="text-xs text-[#8A8A8A] leading-relaxed">
-                  Research papers, domains, languages & complex concepts being actively mastered.
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href={isAuthenticated ? "/activity" : "/signup"} className="block group">
-            <div className="p-8 rounded-2xl bg-sangati-glass border border-white/[0.08] hover:border-white/25 transition-all duration-300 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="h-10 w-10 rounded-xl bg-white/[0.04] border border-white/10 text-[#F5F5F3] flex items-center justify-center">
-                  <MessageSquare className="h-5 w-5" />
-                </div>
-                <span className="text-[10px] font-mono text-[#8A8A8A] border border-white/10 px-2.5 py-1 rounded-full uppercase tracking-widest">
-                  INTENT // 03
-                </span>
-              </div>
-              <div className="space-y-1.5">
-                <h3 className="font-medium text-base text-[#F5F5F3] group-hover:text-white transition-colors">
-                  Conversation
-                </h3>
-                <p className="text-xs text-[#8A8A8A] leading-relaxed">
-                  Open exchange of ideas, philosophical queries, and technical discussions.
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href={isAuthenticated ? "/activity" : "/signup"} className="block group">
-            <div className="p-8 rounded-2xl bg-sangati-glass border border-white/[0.08] hover:border-white/25 transition-all duration-300 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="h-10 w-10 rounded-xl bg-white/[0.04] border border-white/10 text-[#F5F5F3] flex items-center justify-center">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-                <span className="text-[10px] font-mono text-[#8A8A8A] border border-white/10 px-2.5 py-1 rounded-full uppercase tracking-widest">
-                  INTENT // 04
-                </span>
-              </div>
-              <div className="space-y-1.5">
-                <h3 className="font-medium text-base text-[#F5F5F3] group-hover:text-white transition-colors">
-                  Explore
-                </h3>
-                <p className="text-xs text-[#8A8A8A] leading-relaxed">
-                  Discover community work and serendipitous findings without a fixed agenda.
-                </p>
-              </div>
-            </div>
-          </Link>
-        </div>
+        <StaggeredGrid />
       </section>
 
       {/* SECTION 4: Transparent Feed Principles */}
-      <section className="p-8 sm:p-12 rounded-3xl bg-sangati-glass border border-white/[0.08] space-y-8 animate-fade-in-up delay-400">
+      <section className="p-8 sm:p-12 rounded-3xl bg-sangati-glass border border-white/[0.08] space-y-8">
         <div className="space-y-2">
           <span className="text-[11px] font-mono tracking-[0.25em] text-[#8A8A8A] uppercase">
             04 / TRANSPARENT RANKING GUARANTEE
           </span>
-          <h2 className="text-2xl sm:text-3xl font-light text-[#F5F5F3] tracking-tight">
+          <TextAnimation as="h2" className="text-2xl sm:text-3xl font-light text-[#F5F5F3] tracking-tight">
             How your feed is calculated
-          </h2>
+          </TextAnimation>
           <p className="text-xs sm:text-sm text-[#8A8A8A] max-w-xl leading-relaxed font-normal">
             No black-box algorithms. Every post in your feed is ranked deterministically based on verified parameters:
           </p>
