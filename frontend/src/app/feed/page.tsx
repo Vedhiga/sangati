@@ -19,8 +19,11 @@ import {
 import { supabase } from "@/lib/supabase";
 import { api, ApiClientError } from "@/lib/api";
 import { ActivityType, Post, FeedResponse, UserActivity } from "@/types";
+import { PublicActivity } from "@/lib/activity/types";
+import { activityApiService } from "@/lib/activity/api-service";
 import { PostCard } from "@/components/posts/post-card";
 import { PostComposer } from "@/components/posts/post-composer";
+import { ActivityCard } from "@/components/activity/ActivityCard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,6 +80,7 @@ export default function FeedPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentActivity, setCurrentActivity] = useState<ActivityType | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [communityActivities, setCommunityActivities] = useState<PublicActivity[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -110,19 +114,21 @@ export default function FeedPage() {
     setError(null);
 
     try {
-      const data = await api.get<FeedResponse>(
-        `/api/v1/feed?limit=${PAGE_SIZE}&offset=${offset}`
-      );
+      const [feedData, activitiesData] = await Promise.all([
+        api.get<FeedResponse>(`/api/v1/feed?limit=${PAGE_SIZE}&offset=${offset}`),
+        activityApiService.getActivities().catch(() => []),
+      ]);
 
       if (isInitial) {
-        setPosts(data.posts);
+        setPosts(feedData.posts);
       } else {
-        setPosts((prev) => [...prev, ...data.posts]);
+        setPosts((prev) => [...prev, ...feedData.posts]);
       }
 
-      setHasMore(data.pagination.has_more);
-      if (data.current_user_activity) {
-        setCurrentActivity(data.current_user_activity);
+      setCommunityActivities(activitiesData);
+      setHasMore(feedData.pagination.has_more);
+      if (feedData.current_user_activity) {
+        setCurrentActivity(feedData.current_user_activity);
       }
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 401) {
@@ -153,6 +159,22 @@ export default function FeedPage() {
     }
   };
 
+  const handleJoinActivityToggle = async (activityId: string) => {
+    const target = communityActivities.find((a) => a.id === activityId);
+    if (!target) return;
+    try {
+      if (target.is_participant) {
+        await activityApiService.leaveActivity(activityId);
+      } else {
+        await activityApiService.joinActivity(activityId);
+      }
+      const freshActivities = await activityApiService.getActivities();
+      setCommunityActivities(freshActivities);
+    } catch (err) {
+      console.error("Join/leave activity error:", err);
+    }
+  };
+
   const handleLoadMore = () => {
     if (!isLoadingMore && hasMore) {
       loadFeed(posts.length, false);
@@ -173,8 +195,32 @@ export default function FeedPage() {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   };
 
+  const getInterleavedFeed = () => {
+    const items: (
+      | { type: "post"; data: Post }
+      | { type: "activity"; data: PublicActivity }
+    )[] = [];
+    let actIndex = 0;
+
+    posts.forEach((post, i) => {
+      items.push({ type: "post", data: post });
+      if ((i + 1) % 2 === 0 && actIndex < communityActivities.length) {
+        items.push({ type: "activity", data: communityActivities[actIndex] });
+        actIndex++;
+      }
+    });
+
+    while (actIndex < communityActivities.length) {
+      items.push({ type: "activity", data: communityActivities[actIndex] });
+      actIndex++;
+    }
+
+    return items;
+  };
+
   const activeMeta = currentActivity ? ACTIVITIES[currentActivity] : null;
   const ActiveIcon = activeMeta?.icon;
+  const interleavedFeed = getInterleavedFeed();
 
   return (
     <div className="w-full space-y-6 sm:space-y-8 py-2 animate-fade-in-up">
@@ -189,7 +235,7 @@ export default function FeedPage() {
             Community Feed
           </h1>
           <p className="text-xs text-slate-400 leading-relaxed font-normal">
-            Real updates ranked by your active intent, mutual connections, and shared curiosities.
+            Real updates & active community spaces ranked by your intent, mutual connections, and shared curiosities.
           </p>
         </div>
       </div>
@@ -217,7 +263,7 @@ export default function FeedPage() {
                     {activeMeta.label}
                   </span>
                   <span className="text-slate-400 text-[11px] block sm:inline sm:ml-2">
-                    (matching posts ranked higher)
+                    (matching posts & activities ranked higher)
                   </span>
                 </div>
               </>
@@ -308,7 +354,7 @@ export default function FeedPage() {
             </Card>
           ))}
         </div>
-      ) : posts.length === 0 ? (
+      ) : interleavedFeed.length === 0 ? (
         /* Empty State */
         <div className="text-center py-16 px-4 border border-dashed border-white/10 rounded-2xl bg-sangati-glass max-w-md mx-auto space-y-4 shadow-2xl">
           <div className="h-10 w-10 rounded-full bg-white/5 border border-white/10 text-slate-400 flex items-center justify-center mx-auto">
@@ -319,10 +365,16 @@ export default function FeedPage() {
               Your feed is quiet right now.
             </h3>
             <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-              Connect with people or share an update above to kickstart discussions.
+              Connect with people, host an activity, or share an update above to kickstart discussions.
             </p>
           </div>
           <div className="flex items-center justify-center gap-2 pt-2">
+            <Link href="/activities">
+              <Button size="sm" className="text-xs bg-[#C9A84A] text-black font-semibold rounded-xl hover:bg-[#b89739]">
+                <Sparkles className="h-3.5 w-3.5 mr-1" />
+                <span>Browse Activities</span>
+              </Button>
+            </Link>
             <Link href="/discover">
               <Button size="sm" variant="outline" className="text-xs gap-1.5 border-white/15 bg-white/5 text-slate-200 rounded-xl">
                 <Users className="h-3.5 w-3.5" />
@@ -332,17 +384,34 @@ export default function FeedPage() {
           </div>
         </div>
       ) : (
-        /* Post Stream */
+        /* Combined Stream: Posts + Activities */
         <div className="space-y-4">
-          {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              currentUserId={currentUserId}
-              onPostUpdated={handlePostUpdated}
-              onPostDeleted={handlePostDeleted}
-            />
-          ))}
+          {interleavedFeed.map((item) => {
+            if (item.type === "post") {
+              return (
+                <PostCard
+                  key={`post-${item.data.id}`}
+                  post={item.data}
+                  currentUserId={currentUserId}
+                  onPostUpdated={handlePostUpdated}
+                  onPostDeleted={handlePostDeleted}
+                />
+              );
+            } else {
+              return (
+                <div
+                  key={`activity-${item.data.id}`}
+                  onClick={() => router.push(`/activities/${item.data.id}`)}
+                  className="cursor-pointer"
+                >
+                  <ActivityCard
+                    activity={item.data}
+                    onJoinToggle={() => handleJoinActivityToggle(item.data.id)}
+                  />
+                </div>
+              );
+            }
+          })}
 
           {/* Load More Action */}
           {hasMore && (

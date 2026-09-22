@@ -3,6 +3,7 @@ from app.api.v1.endpoints import (
     health,
     profile,
     activity,
+    activities,
     discover,
     connection,
     post,
@@ -17,6 +18,7 @@ api_router = APIRouter()
 api_router.include_router(health.router)
 api_router.include_router(profile.router)
 api_router.include_router(activity.router)
+api_router.include_router(activities.router)
 api_router.include_router(discover.router)
 api_router.include_router(connection.router)
 api_router.include_router(post.router)

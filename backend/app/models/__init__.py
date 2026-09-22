@@ -4,6 +4,16 @@ from app.models.connection import Connection, ConnectionStatus
 from app.models.post import ActivityPost
 from app.models.conversation import Conversation, ConversationParticipant, Message
 from app.models.notification import Notification, NotificationType
+from app.models.activity_system import (
+    Activity,
+    ActivityParticipant,
+    ActivitySession,
+    ActivityInvitation,
+    ActivityStatus,
+    ParticipantStatus,
+    SessionStatus,
+    InvitationStatus,
+)
 
 __all__ = [
     "Profile",
@@ -16,5 +26,13 @@ __all__ = [
     "Message",
     "Notification",
     "NotificationType",
+    "Activity",
+    "ActivityParticipant",
+    "ActivitySession",
+    "ActivityInvitation",
+    "ActivityStatus",
+    "ParticipantStatus",
+    "SessionStatus",
+    "InvitationStatus",
 ]
 

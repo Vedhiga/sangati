@@ -18,6 +18,7 @@ import {
   Loader2,
   Layers,
   ChevronRight,
+  Activity as ActivityIcon,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { api } from "@/lib/api";
@@ -194,6 +195,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
     { href: "/feed", label: "Feed", icon: Layers },
+    { href: "/activities", label: "Activities", icon: ActivityIcon },
     { href: "/discover", label: "Discover", icon: Compass },
     { href: "/activity", label: "Intent", icon: Sparkles },
     { href: "/connections", label: "Connections", icon: UserCheck, badge: hasPendingRequests },
@@ -494,13 +496,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Translucent Bottom Bar (< 768px) */}
       <nav className="md:hidden sticky bottom-0 z-40 w-full border-t border-white/[0.08] bg-[#0A0A0A]/90 backdrop-blur-xl px-2 py-1.5 flex items-center justify-around">
-        {[
-          { href: "/", label: "Home", icon: Home },
-          { href: "/feed", label: "Feed", icon: Layers },
-          { href: "/discover", label: "Discover", icon: Compass },
-          { href: "/connections", label: "Connections", icon: UserCheck, badge: hasPendingRequests },
-          { href: "/messages", label: "Messages", icon: MessageSquare, unreadCount: unreadMessagesCount },
-        ].map((link) => {
+        {(
+          [
+            { href: "/", label: "Home", icon: Home },
+            { href: "/feed", label: "Feed", icon: Layers },
+            { href: "/activities", label: "Activities", icon: ActivityIcon },
+            { href: "/discover", label: "Discover", icon: Compass },
+            { href: "/messages", label: "Messages", icon: MessageSquare, unreadCount: unreadMessagesCount },
+          ] as Array<{ href: string; label: string; icon: any; badge?: boolean; unreadCount?: number }>
+        ).map((link) => {
           const Icon = link.icon;
           const isActive =
             link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
