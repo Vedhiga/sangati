@@ -409,12 +409,25 @@ export default function MessagesInboxPage() {
           )}
         </div>
       ) : (
-        /* Conversation List */
+        /* Categorized Conversation Lists */
         <div className="space-y-6">
-          <div className="divide-y divide-white/5 rounded-xl border border-white/10 bg-sangati-glass overflow-hidden">
-            {conversations.map((convo) => {
+          {/* Helper function / component for single conversation item */}
+          {(() => {
+            const activityConversations = conversations.filter(
+              (c) => c.conversation_type === "ACTIVITY" || !!c.activity_id
+            );
+            const groupConversations = conversations.filter(
+              (c) => (c.conversation_type || (c.is_group ? "GROUP" : "DIRECT")) === "GROUP" && !c.activity_id
+            );
+            const directConversations = conversations.filter(
+              (c) => (c.conversation_type || (c.is_group ? "GROUP" : "DIRECT")) === "DIRECT" && !c.activity_id
+            );
+
+            const renderConvoCard = (convo: ConversationItem, isActivitySection = false) => {
               const isGroup = convo.is_group;
-              const title = convo.title || (isGroup
+              const isActivity = convo.conversation_type === "ACTIVITY" || !!convo.activity_id;
+              const isArchived = convo.status === "ARCHIVED";
+              const title = convo.title || (isGroup || isActivity
                 ? convo.participants?.map((p) => p.display_name).join(", ")
                 : convo.other_user?.display_name || "Conversation");
 
@@ -438,12 +451,16 @@ export default function MessagesInboxPage() {
                   className="block p-4 hover:bg-white/5 transition-colors duration-150 group"
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
-                    <Avatar className={`h-10 w-10 border shrink-0 ${isGroup ? "border-amber-400/50" : "border-white/15"}`}>
-                      {!isGroup && other?.avatar_url && (
-                        <AvatarImage src={other.avatar_url} alt={title} />
+                    <Avatar className={`h-10 w-10 border shrink-0 ${
+                      isActivity ? "border-amber-400/50" : isGroup ? "border-blue-400/50" : "border-white/15"
+                    }`}>
+                      {!isGroup && !isActivity && other?.avatar_url && (
+                        <AvatarImage src={other.avatar_url} alt={title || ""} />
                       )}
-                      <AvatarFallback className={`text-xs font-semibold ${isGroup ? "bg-amber-500/20 text-amber-300" : "bg-slate-800 text-slate-300"}`}>
-                        {isGroup ? <Users className="h-4 w-4" /> : initials}
+                      <AvatarFallback className={`text-xs font-semibold ${
+                        isActivity ? "bg-amber-500/20 text-amber-300" : isGroup ? "bg-blue-500/20 text-blue-300" : "bg-slate-800 text-slate-300"
+                      }`}>
+                        {isActivity ? "🤖" : isGroup ? <Users className="h-4 w-4" /> : initials}
                       </AvatarFallback>
                     </Avatar>
 
@@ -452,20 +469,33 @@ export default function MessagesInboxPage() {
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="font-semibold text-slate-100 text-sm truncate group-hover:text-white transition-colors flex items-center gap-1.5">
                             {title}
-                            {isGroup && (
-                              <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium px-2 py-0.5 rounded-md shrink-0">
-                                Group ({convo.participants?.length || 2})
-                              </span>
-                            )}
                           </span>
 
-                          {!isGroup && other && (
+                          {isActivity && (
+                            <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1">
+                              <span>🤖 Activity</span>
+                            </span>
+                          )}
+
+                          {isArchived && (
+                            <span className="text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700 font-medium px-2 py-0.5 rounded-md shrink-0">
+                              Ended / Archived
+                            </span>
+                          )}
+
+                          {isGroup && !isActivity && (
+                            <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium px-2 py-0.5 rounded-md shrink-0">
+                              Group ({convo.participants?.length || 2})
+                            </span>
+                          )}
+
+                          {!isGroup && !isActivity && other && (
                             <span className="text-xs text-slate-400 truncate hidden sm:inline">
                               @{other.username}
                             </span>
                           )}
 
-                          {!isGroup && activityMeta && (
+                          {!isGroup && !isActivity && activityMeta && (
                             <span
                               className={`text-[10px] font-medium py-0.5 px-2 rounded-md border shrink-0 ${activityMeta.badgeBg}`}
                             >
@@ -495,8 +525,53 @@ export default function MessagesInboxPage() {
                   </div>
                 </Link>
               );
-            })}
-          </div>
+            };
+
+            return (
+              <div className="space-y-6">
+                {/* Activities Section */}
+                {activityConversations.length > 0 && (
+                  <div className="space-y-2">
+                    <h2 className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 px-1">
+                      <span>🤖 Activity Chats</span>
+                      <span className="text-[10px] text-amber-400/70 font-mono">({activityConversations.length})</span>
+                    </h2>
+                    <div className="divide-y divide-white/5 rounded-xl border border-amber-500/20 bg-sangati-glass overflow-hidden">
+                      {activityConversations.map((c) => renderConvoCard(c, true))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Groups Section */}
+                {groupConversations.length > 0 && (
+                  <div className="space-y-2">
+                    <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 px-1">
+                      <Users className="h-3.5 w-3.5 text-blue-400" />
+                      <span>Group Conversations</span>
+                      <span className="text-[10px] text-slate-500 font-mono">({groupConversations.length})</span>
+                    </h2>
+                    <div className="divide-y divide-white/5 rounded-xl border border-white/10 bg-sangati-glass overflow-hidden">
+                      {groupConversations.map((c) => renderConvoCard(c))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Direct Messages Section */}
+                {directConversations.length > 0 && (
+                  <div className="space-y-2">
+                    <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 px-1">
+                      <MessageSquare className="h-3.5 w-3.5 text-amber-400" />
+                      <span>Direct Messages</span>
+                      <span className="text-[10px] text-slate-500 font-mono">({directConversations.length})</span>
+                    </h2>
+                    <div className="divide-y divide-white/5 rounded-xl border border-white/10 bg-sangati-glass overflow-hidden">
+                      {directConversations.map((c) => renderConvoCard(c))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Quick-start with other connections */}
           {availableConnectionsToMessage.length > 0 && (

@@ -502,7 +502,17 @@ export default function ConversationDetailPage() {
                   <h2 className="text-sm font-semibold text-[#F5F5F3] truncate">
                     {title}
                   </h2>
-                  {!isGroup && activityMeta && (
+                  {conversation?.conversation_type === "ACTIVITY" && (
+                    <span className="text-[10px] font-medium py-0.5 px-2 rounded-full border bg-amber-500/10 text-amber-400 border-amber-500/20 shrink-0">
+                      🤖 Activity
+                    </span>
+                  )}
+                  {conversation?.status === "ARCHIVED" && (
+                    <span className="text-[10px] font-medium py-0.5 px-2 rounded-full border bg-zinc-800 text-zinc-400 border-zinc-700 shrink-0">
+                      Ended / Read-Only
+                    </span>
+                  )}
+                  {!isGroup && activityMeta && conversation?.conversation_type !== "ACTIVITY" && (
                     <span
                       className={`text-[10px] font-mono py-0.5 px-2 rounded-full border shrink-0 ${activityMeta.badgeBg}`}
                     >
@@ -521,7 +531,7 @@ export default function ConversationDetailPage() {
         </div>
 
         {/* 📞 Voice & 🎥 Video Calling Buttons (1-to-1 Only) */}
-        {!isGroup && otherUser && (
+        {!isGroup && otherUser && conversation?.conversation_type !== "ACTIVITY" && (
           <div className="flex items-center gap-2 shrink-0">
             <Button
               size="sm"
@@ -574,7 +584,7 @@ export default function ConversationDetailPage() {
                     <AvatarImage src={otherUser.avatar_url} />
                   )}
                   <AvatarFallback className="bg-zinc-900 text-[#F5F5F3] text-base font-semibold">
-                    {isGroup ? <Sparkles className="h-6 w-6" /> : initials}
+                    {isGroup || conversation.conversation_type === "ACTIVITY" ? <Sparkles className="h-6 w-6 text-amber-400" /> : initials}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -588,7 +598,9 @@ export default function ConversationDetailPage() {
                   )}
                 </div>
                 <p className="text-[11px] text-[#8A8A8A] font-normal pt-1">
-                  Connected on Sangati. 1-to-1 quiet conversation & WebRTC calls.
+                  {conversation.conversation_type === "ACTIVITY"
+                    ? "Activity group conversation. Shared by all participants."
+                    : "Connected on Sangati. 1-to-1 quiet conversation & WebRTC calls."}
                 </p>
               </div>
             )}
@@ -653,39 +665,48 @@ export default function ConversationDetailPage() {
           )}
 
           {/* Composer */}
-          <div className="pt-3 pb-1 border-t border-white/[0.08] shrink-0">
-            <div className="relative rounded-2xl border border-white/[0.08] bg-sangati-card p-3 focus-within:border-white/20 transition-all shadow-xl">
-              <Textarea
-                ref={textareaRef}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Write a note... (Shift+Enter for newline)"
-                maxLength={2000}
-                rows={2}
-                disabled={isSending}
-                className="w-full resize-none border-0 p-1 text-sm text-[#F5F5F3] bg-transparent focus-visible:ring-0 shadow-none placeholder:text-zinc-600 min-h-[48px]"
-              />
-
-              <div className="flex items-center justify-between pt-2 text-[11px] text-[#8A8A8A] border-t border-white/[0.06] px-1">
-                <span className="font-mono">{content.length} / 2000</span>
-
-                <Button
-                  size="sm"
-                  onClick={handleSendMessage}
-                  disabled={!content.trim() || isSending || content.length > 2000}
-                  className="h-8 px-4 text-xs gap-1.5 bg-[#F5F5F3] text-[#0A0A0A] hover:bg-white font-medium rounded-full shadow-lg transition-all"
-                >
-                  {isSending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Send className="h-3.5 w-3.5" />
-                  )}
-                  <span>Send</span>
-                </Button>
+          {conversation?.status === "ARCHIVED" ? (
+            <div className="pt-3 pb-2 border-t border-white/[0.08] shrink-0 text-center">
+              <div className="p-3.5 rounded-2xl border border-white/10 bg-zinc-900/60 text-xs text-zinc-400 font-mono flex items-center justify-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-400" />
+                <span>This activity conversation has ended and is read-only.</span>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="pt-3 pb-1 border-t border-white/[0.08] shrink-0">
+              <div className="relative rounded-2xl border border-white/[0.08] bg-sangati-card p-3 focus-within:border-white/20 transition-all shadow-xl">
+                <Textarea
+                  ref={textareaRef}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Write a note... (Shift+Enter for newline)"
+                  maxLength={2000}
+                  rows={2}
+                  disabled={isSending}
+                  className="w-full resize-none border-0 p-1 text-sm text-[#F5F5F3] bg-transparent focus-visible:ring-0 shadow-none placeholder:text-zinc-600 min-h-[48px]"
+                />
+
+                <div className="flex items-center justify-between pt-2 text-[11px] text-[#8A8A8A] border-t border-white/[0.06] px-1">
+                  <span className="font-mono">{content.length} / 2000</span>
+
+                  <Button
+                    size="sm"
+                    onClick={handleSendMessage}
+                    disabled={!content.trim() || isSending || content.length > 2000}
+                    className="h-8 px-4 text-xs gap-1.5 bg-[#F5F5F3] text-[#0A0A0A] hover:bg-white font-medium rounded-full shadow-lg transition-all"
+                  >
+                    {isSending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
+                    <span>Send</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

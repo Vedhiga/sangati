@@ -74,6 +74,7 @@ export interface PublicActivity {
   public_participants: ActivityParticipant[];
   is_participant?: boolean;
   is_host?: boolean;
+  conversation_id?: string | null;
 }
 
 // PRIVATE Participant Details (ONLY available to joined participants / host)

@@ -25,6 +25,9 @@ import {
 } from "lucide-react";
 import { activityApiService } from "@/lib/activity/api-service";
 
+import { useRouter } from "next/navigation";
+import { JoinActivityChatModal } from "@/components/activity/JoinActivityChatModal";
+
 interface ActivityDetailProps {
   activityId: string;
   currentUserId?: string;
@@ -36,6 +39,7 @@ export function ActivityDetail({
   currentUserId,
   onBack,
 }: ActivityDetailProps) {
+  const router = useRouter();
   const [publicData, setPublicData] = useState<PublicActivity | null>(null);
   const [privateData, setPrivateData] = useState<ParticipantActivityDetails | null>(null);
   const [connections, setConnections] = useState<MockConnection[]>([]);
@@ -43,6 +47,10 @@ export function ActivityDetail({
   const [chatInput, setChatInput] = useState("");
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "chat" | "participants">("overview");
+
+  // Activity Chat modal state
+  const [isJoinChatOpen, setIsJoinChatOpen] = useState(false);
+  const [isJoiningChat, setIsJoiningChat] = useState(false);
 
   const loadActivityData = async () => {
     setLoading(true);
@@ -92,6 +100,41 @@ export function ActivityDetail({
     );
   }
 
+  const handleOpenChat = async () => {
+    if (publicData.is_participant || publicData.is_host || publicData.status === "ENDED") {
+      try {
+        let convoId = publicData.conversation_id;
+        if (!convoId) {
+          const convo = await activityApiService.getActivityConversation(activityId);
+          convoId = convo.id;
+        }
+        router.push(`/messages/${convoId}`);
+      } catch (err) {
+        console.error("Failed to fetch activity conversation:", err);
+      }
+    } else {
+      setIsJoinChatOpen(true);
+    }
+  };
+
+  const handleConfirmJoinChat = async () => {
+    setIsJoiningChat(true);
+    try {
+      const joined = await activityApiService.joinActivity(activityId);
+      let convoId = joined.conversation_id;
+      if (!convoId) {
+        const convo = await activityApiService.getActivityConversation(activityId);
+        convoId = convo.id;
+      }
+      setIsJoinChatOpen(false);
+      router.push(`/messages/${convoId}`);
+    } catch (err) {
+      console.error("Failed to join activity chat:", err);
+    } finally {
+      setIsJoiningChat(false);
+    }
+  };
+
   const handleJoin = async () => {
     await activityApiService.joinActivity(activityId);
     await loadActivityData();
@@ -122,14 +165,6 @@ export function ActivityDetail({
     await loadActivityData();
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    await activityApiService.sendChatMessage(activityId, chatInput);
-    setChatInput("");
-    await loadActivityData();
-  };
-
   const elasticItems = publicData.public_participants.map((p) => ({
     id: p.id,
     image: p.avatar,
@@ -141,11 +176,11 @@ export function ActivityDetail({
       {/* Top Navigation */}
       <div className="flex items-center justify-between">
         <Link
-          href="/activity-lab"
+          href="/activities"
           className="inline-flex items-center gap-2 text-xs font-medium text-neutral-400 hover:text-neutral-200 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Activity Lab
+          Back to Activities
         </Link>
         <div className="flex items-center gap-2">
           {getActivityStatusBadge(publicData.status)}
@@ -214,30 +249,47 @@ export function ActivityDetail({
 
         {/* Primary Participation Action Bar */}
         <div className="pt-4 border-t border-neutral-800/60 flex flex-wrap items-center justify-between gap-4">
-          {publicData.is_participant ? (
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                <UserCheck className="w-4 h-4" />✓ Participating
-              </span>
-              {!publicData.is_host && (
-                <button
-                  onClick={handleLeave}
-                  className="text-xs text-neutral-400 hover:text-red-400 underline transition-colors"
-                >
-                  Leave Activity
-                </button>
-              )}
-            </div>
-          ) : (
+          <div className="flex items-center gap-3">
+            {publicData.is_participant ? (
+              <>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  <UserCheck className="w-4 h-4" />✓ Participating
+                </span>
+                {!publicData.is_host && (
+                  <button
+                    onClick={handleLeave}
+                    className="text-xs text-neutral-400 hover:text-red-400 underline transition-colors"
+                  >
+                    Leave Activity
+                  </button>
+                )}
+              </>
+            ) : (
+              <button
+                onClick={handleJoin}
+                disabled={publicData.status !== "ACTIVE"}
+                className="px-6 py-3 rounded-xl font-bold text-sm bg-[#C9A84A] hover:bg-[#b5953f] text-neutral-950 transition-all shadow-lg shadow-[#C9A84A]/10 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
+              >
+                <Sparkles className="w-4 h-4 text-neutral-950" />
+                Join Activity
+              </button>
+            )}
+
+            {/* Activity Chat Button */}
             <button
-              onClick={handleJoin}
-              disabled={publicData.status !== "ACTIVE"}
-              className="px-6 py-3 rounded-xl font-bold text-sm bg-[#C9A84A] hover:bg-[#b5953f] text-neutral-950 transition-all shadow-lg shadow-[#C9A84A]/10 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
+              onClick={handleOpenChat}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 border border-white/15 text-neutral-100 transition-all inline-flex items-center gap-2"
             >
-              <Sparkles className="w-4 h-4 text-neutral-950" />
-              Join Activity
+              <MessageSquare className="w-4 h-4 text-amber-400" />
+              <span>
+                {publicData.status === "ENDED"
+                  ? "View Activity Chat"
+                  : publicData.is_participant
+                  ? "Activity Chat"
+                  : "Join Activity Chat"}
+              </span>
             </button>
-          )}
+          </div>
 
           {!publicData.is_participant && (
             <div className="text-xs text-neutral-500 flex items-center gap-1.5">
@@ -339,64 +391,27 @@ export function ActivityDetail({
             </div>
           )}
 
-          {/* Tab 2: Private Activity Chat */}
+          {/* Tab 2: Activity Chat */}
           {activeTab === "chat" && publicData.is_participant && (
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-amber-400" />
-                  <h3 className="text-xs font-semibold text-neutral-200 uppercase tracking-wider">
-                    Activity Discussion Space
-                  </h3>
-                </div>
-                <span className="text-[11px] text-neutral-500">Private to participants</span>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 text-center space-y-4">
+              <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                <MessageSquare className="w-6 h-6" />
               </div>
-
-              {/* Messages list */}
-              <div className="h-64 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                {privateData?.chat_messages && privateData.chat_messages.length > 0 ? (
-                  privateData.chat_messages.map((msg) => (
-                    <div key={msg.id} className="flex items-start gap-3 text-xs">
-                      <div className="w-7 h-7 rounded-full bg-neutral-800 border border-neutral-700 overflow-hidden shrink-0 flex items-center justify-center font-bold text-neutral-300 text-[10px]">
-                        {msg.sender_avatar ? (
-                          <img src={msg.sender_avatar} alt={msg.sender_name} className="w-full h-full object-cover" />
-                        ) : (
-                          msg.sender_name.charAt(0)
-                        )}
-                      </div>
-                      <div className="space-y-1 bg-neutral-950/60 p-2.5 rounded-lg border border-neutral-800/80 flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-neutral-200">{msg.sender_name}</span>
-                          <span className="text-[10px] text-neutral-500">{msg.created_at}</span>
-                        </div>
-                        <p className="text-neutral-300">{msg.text}</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="h-full flex items-center justify-center text-xs text-neutral-500">
-                    No messages yet. Start the conversation!
-                  </div>
-                )}
+              <div className="space-y-1 max-w-md mx-auto">
+                <h3 className="text-sm font-semibold text-neutral-100">
+                  Integrated Group Conversation
+                </h3>
+                <p className="text-xs text-neutral-400 leading-relaxed">
+                  Activity Chat is part of the persistent Sangati Messages system. Connect with all participants in real-time.
+                </p>
               </div>
-
-              {/* Chat Input */}
-              <form onSubmit={handleSendMessage} className="flex gap-2 pt-2 border-t border-neutral-800">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Share notes, ask questions, or say hello..."
-                  className="flex-1 py-2 px-3 text-xs rounded-lg border border-neutral-800 bg-neutral-950 text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-amber-500/50"
-                />
-                <button
-                  type="submit"
-                  disabled={!chatInput.trim()}
-                  className="px-3 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-neutral-950 text-xs font-semibold disabled:opacity-40"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                </button>
-              </form>
+              <button
+                onClick={handleOpenChat}
+                className="px-5 py-2.5 rounded-xl font-semibold text-xs bg-amber-400 hover:bg-amber-300 text-neutral-950 transition-all inline-flex items-center gap-2 shadow-lg shadow-amber-400/10"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Open Activity Chat in Messages</span>
+              </button>
             </div>
           )}
 
@@ -450,6 +465,15 @@ export function ActivityDetail({
           </div>
         </div>
       </div>
+
+      {/* Join Activity Chat Modal */}
+      <JoinActivityChatModal
+        isOpen={isJoinChatOpen}
+        onClose={() => setIsJoinChatOpen(false)}
+        onConfirm={handleConfirmJoinChat}
+        activityTitle={publicData.title}
+        isJoining={isJoiningChat}
+      />
 
       {/* Invitation Dialog Modal */}
       <ActivityInviteDialog

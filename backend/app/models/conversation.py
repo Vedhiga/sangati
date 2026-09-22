@@ -12,12 +12,15 @@ class Conversation(Base):
     id = Column(GUID, primary_key=True, default=uuid.uuid4)
     title = Column(String(100), nullable=True)
     is_group = Column(Boolean, default=False, nullable=False)
+    conversation_type = Column(String(20), default="DIRECT", nullable=False, index=True)
+    activity_id = Column(GUID, ForeignKey("activities.id", ondelete="SET NULL"), nullable=True, index=True)
+    status = Column(String(20), default="ACTIVE", nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     last_message_at = Column(DateTime(timezone=True), nullable=True, index=True)
 
     def __repr__(self) -> str:
-        return f"<Conversation id={self.id} title={self.title} is_group={self.is_group}>"
+        return f"<Conversation id={self.id} title={self.title} type={self.conversation_type} activity={self.activity_id}>"
 
 
 class ConversationParticipant(Base):

@@ -9,6 +9,8 @@ import { HostActivityForm } from "@/components/activity/HostActivityForm";
 import { LiquidMetalButton } from "@/components/ui/liquid-metal";
 import { Plus, Sparkles, Filter, Loader2, RefreshCw } from "lucide-react";
 
+import { JoinActivityChatModal } from "@/components/activity/JoinActivityChatModal";
+
 export default function ActivitiesPage() {
   const router = useRouter();
   const [activities, setActivities] = useState<PublicActivity[]>([]);
@@ -16,6 +18,10 @@ export default function ActivitiesPage() {
   const [isHostModalOpen, setIsHostModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Activity Chat modal state
+  const [selectedActivityForChat, setSelectedActivityForChat] = useState<PublicActivity | null>(null);
+  const [isJoiningChat, setIsJoiningChat] = useState(false);
 
   const fetchActivities = async () => {
     setLoading(true);
@@ -53,6 +59,42 @@ export default function ActivitiesPage() {
       await fetchActivities();
     } catch (err: any) {
       console.error("Join/Leave error:", err);
+    }
+  };
+
+  const handleOpenActivityChat = async (activity: PublicActivity) => {
+    if (activity.is_participant || activity.is_host || activity.status === "ENDED") {
+      try {
+        if (activity.conversation_id) {
+          router.push(`/messages/${activity.conversation_id}`);
+        } else {
+          const convo = await activityApiService.getActivityConversation(activity.id);
+          router.push(`/messages/${convo.id}`);
+        }
+      } catch (err) {
+        console.error("Failed to open activity conversation:", err);
+      }
+    } else {
+      setSelectedActivityForChat(activity);
+    }
+  };
+
+  const handleConfirmJoinChat = async () => {
+    if (!selectedActivityForChat) return;
+    setIsJoiningChat(true);
+    try {
+      const joined = await activityApiService.joinActivity(selectedActivityForChat.id);
+      let convoId = joined.conversation_id;
+      if (!convoId) {
+        const convo = await activityApiService.getActivityConversation(selectedActivityForChat.id);
+        convoId = convo.id;
+      }
+      setSelectedActivityForChat(null);
+      router.push(`/messages/${convoId}`);
+    } catch (err) {
+      console.error("Failed to join activity chat:", err);
+    } finally {
+      setIsJoiningChat(false);
     }
   };
 
@@ -168,11 +210,21 @@ export default function ActivitiesPage() {
                   e?.stopPropagation?.();
                   handleJoinToggle(act.id);
                 }}
+                onActivityChat={(a) => handleOpenActivityChat(a)}
               />
             </div>
           ))}
         </div>
       )}
+
+      {/* Join Activity Chat Modal */}
+      <JoinActivityChatModal
+        isOpen={!!selectedActivityForChat}
+        onClose={() => setSelectedActivityForChat(null)}
+        onConfirm={handleConfirmJoinChat}
+        activityTitle={selectedActivityForChat?.title}
+        isJoining={isJoiningChat}
+      />
 
       {/* Host Activity Modal Form */}
       {isHostModalOpen && (

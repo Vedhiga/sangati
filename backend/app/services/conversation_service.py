@@ -234,7 +234,7 @@ class ConversationService:
                     act_type = op_act.activity_type if op_act else None
                     part_public_users.append(_build_public_user(op_prof, act_type))
 
-            if not part_public_users:
+            if not c.is_group and (c.conversation_type or "DIRECT") != "ACTIVITY" and not part_public_users:
                 continue
 
             other_user = part_public_users[0] if part_public_users else None
@@ -260,6 +260,9 @@ class ConversationService:
                     id=c.id,
                     title=c.title,
                     is_group=c.is_group,
+                    conversation_type=c.conversation_type or ("GROUP" if c.is_group else "DIRECT"),
+                    activity_id=c.activity_id,
+                    status=c.status or "ACTIVE",
                     other_user=other_user,
                     participants=part_public_users,
                     last_message=msg_preview,
@@ -317,6 +320,9 @@ class ConversationService:
             id=convo.id,
             title=convo.title,
             is_group=convo.is_group,
+            conversation_type=convo.conversation_type or ("GROUP" if convo.is_group else "DIRECT"),
+            activity_id=convo.activity_id,
+            status=convo.status or "ACTIVE",
             other_user=other_user,
             participants=part_public_users,
             created_at=convo.created_at,
@@ -388,10 +394,20 @@ class ConversationService:
         - Authenticated user must belong to conversation.
         - sender_id derived exclusively from authenticated user.
         - Updates conversation.last_message_at.
+        - Prevents sending messages if conversation is ARCHIVED or associated activity is ENDED.
         """
         convo = db.query(Conversation).filter(Conversation.id == conversation_id).first()
         if not convo:
             raise ConversationNotFoundException("Conversation not found.")
+
+        if (convo.status or "ACTIVE") == "ARCHIVED":
+            raise UnauthorizedConversationActionException("This conversation has ended and is read-only.")
+
+        if convo.activity_id or convo.conversation_type == "ACTIVITY":
+            from app.models.activity_system import Activity, ActivityStatus
+            act = db.query(Activity).filter(Activity.id == convo.activity_id).first() if convo.activity_id else None
+            if act and act.status == ActivityStatus.ENDED:
+                raise UnauthorizedConversationActionException("This activity has ended. New messages cannot be sent.")
 
         participant = (
             db.query(ConversationParticipant)

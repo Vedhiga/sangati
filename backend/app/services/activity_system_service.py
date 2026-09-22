@@ -18,6 +18,7 @@ from app.models.activity_system import (
     InvitationStatus,
 )
 from app.models.profile import Profile
+from app.models.conversation import Conversation, ConversationParticipant
 from app.models.connection import Connection, ConnectionStatus
 from app.models.notification import Notification, NotificationType
 from app.schemas.activity import safe_parse_activity_type
@@ -143,6 +144,7 @@ class ActivitySystemService:
                     participant_limit=act.max_participants,
                     participant_count=len(participants),
                     status=act.status,
+                    conversation_id=act.conversation_id,
                     host=ActivitySystemService._build_host_public(host_map.get(act.host_user_id), act.host_user_id),
                     created_at=act.created_at or datetime.now(timezone.utc),
                     public_participants=participants,
@@ -225,6 +227,7 @@ class ActivitySystemService:
                 participant_limit=act.max_participants,
                 participant_count=len(participants),
                 status=act.status,
+                conversation_id=act.conversation_id,
                 host=host_public,
                 created_at=act.created_at or datetime.now(timezone.utc),
                 public_participants=participants,
@@ -257,6 +260,7 @@ class ActivitySystemService:
             participant_limit=act.max_participants,
             participant_count=len(participants),
             status=act.status,
+            conversation_id=act.conversation_id,
             host=host_public,
             created_at=act.created_at or datetime.now(timezone.utc),
             public_participants=participants,
@@ -290,13 +294,32 @@ class ActivitySystemService:
         db.add(act)
         db.flush()
 
-        # Add host as first participant
+        # Create associated activity group conversation
+        convo = Conversation(
+            title=f"Activity: {req.title.strip()}",
+            is_group=True,
+            conversation_type="ACTIVITY",
+            activity_id=act.id,
+            status="ACTIVE",
+        )
+        db.add(convo)
+        db.flush()
+
+        act.conversation_id = convo.id
+
+        # Add host as first participant in activity & conversation
         host_part = ActivityParticipant(
             activity_id=act.id,
             user_id=host_id,
             status=ParticipantStatus.JOINED.value,
         )
         db.add(host_part)
+
+        convo_part = ConversationParticipant(
+            conversation_id=convo.id,
+            user_id=host_id,
+        )
+        db.add(convo_part)
 
         # Create initial upcoming session
         initial_sess = ActivitySession(
@@ -359,6 +382,34 @@ class ActivitySystemService:
             existing.status = ParticipantStatus.JOINED.value
             existing.left_at = None
 
+        # Ensure conversation exists and sync user as conversation participant
+        convo = None
+        if act.conversation_id:
+            convo = db.query(Conversation).filter(Conversation.id == act.conversation_id).first()
+
+        if not convo:
+            convo = Conversation(
+                title=f"Activity: {act.title}",
+                is_group=True,
+                conversation_type="ACTIVITY",
+                activity_id=act.id,
+                status="ACTIVE",
+            )
+            db.add(convo)
+            db.flush()
+            act.conversation_id = convo.id
+
+        convo_part = (
+            db.query(ConversationParticipant)
+            .filter(
+                ConversationParticipant.conversation_id == convo.id,
+                ConversationParticipant.user_id == user_id,
+            )
+            .first()
+        )
+        if not convo_part:
+            db.add(ConversationParticipant(conversation_id=convo.id, user_id=user_id))
+
         db.commit()
         return ActivitySystemService.get_activity_detail(db, activity_id, user_id)
 
@@ -387,6 +438,20 @@ class ActivitySystemService:
         if part:
             part.status = ParticipantStatus.LEFT.value
             part.left_at = datetime.now(timezone.utc)
+
+            # Sync: Remove from conversation participants so user loses active sending privileges
+            if act.conversation_id:
+                cp = (
+                    db.query(ConversationParticipant)
+                    .filter(
+                        ConversationParticipant.conversation_id == act.conversation_id,
+                        ConversationParticipant.user_id == user_id,
+                    )
+                    .first()
+                )
+                if cp:
+                    db.delete(cp)
+
             db.commit()
 
         return ActivitySystemService.get_activity_detail(db, activity_id, user_id)
@@ -440,6 +505,13 @@ class ActivitySystemService:
 
         act.status = ActivityStatus.ENDED.value
         act.ended_at = datetime.now(timezone.utc)
+
+        # Archive conversation (read-only historical access preserved)
+        if act.conversation_id:
+            convo = db.query(Conversation).filter(Conversation.id == act.conversation_id).first()
+            if convo:
+                convo.status = "ARCHIVED"
+
         db.commit()
         return ActivitySystemService.get_activity_detail(db, activity_id, user_id)
 

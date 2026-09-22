@@ -207,6 +207,9 @@ export interface ConversationItem {
   id: string;
   title?: string | null;
   is_group?: boolean;
+  conversation_type?: string;
+  activity_id?: string | null;
+  status?: string;
   other_user?: ConnectionUserPublic | null;
   participants?: ConnectionUserPublic[];
   last_message?: MessagePreview | null;
@@ -223,6 +226,9 @@ export interface ConversationDetail {
   id: string;
   title?: string | null;
   is_group?: boolean;
+  conversation_type?: string;
+  activity_id?: string | null;
+  status?: string;
   other_user?: ConnectionUserPublic | null;
   participants?: ConnectionUserPublic[];
   created_at: string;

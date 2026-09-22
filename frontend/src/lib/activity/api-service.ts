@@ -96,4 +96,8 @@ export const activityApiService = {
       created_at: new Date().toISOString(),
     };
   },
+  // Get associated group conversation for activity
+  async getActivityConversation(id: string): Promise<any> {
+    return await api.get(`/api/v1/activities/${id}/conversation`);
+  },
 };

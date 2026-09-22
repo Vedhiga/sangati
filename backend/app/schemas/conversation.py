@@ -67,6 +67,9 @@ class ConversationItemResponse(BaseModel):
     id: UUID
     title: Optional[str] = None
     is_group: bool = False
+    conversation_type: Optional[str] = "DIRECT"
+    activity_id: Optional[UUID] = None
+    status: Optional[str] = "ACTIVE"
     other_user: Optional[ConnectionUserPublic] = None
     participants: List[ConnectionUserPublic] = Field(default_factory=list)
     last_message: Optional[MessagePreview] = None
@@ -83,6 +86,9 @@ class ConversationDetailResponse(BaseModel):
     id: UUID
     title: Optional[str] = None
     is_group: bool = False
+    conversation_type: Optional[str] = "DIRECT"
+    activity_id: Optional[UUID] = None
+    status: Optional[str] = "ACTIVE"
     other_user: Optional[ConnectionUserPublic] = None
     participants: List[ConnectionUserPublic] = Field(default_factory=list)
     created_at: datetime

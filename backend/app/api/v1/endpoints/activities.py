@@ -13,6 +13,7 @@ from app.schemas.activity_system import (
     ActivityInviteRequest,
 )
 from app.schemas.error import ErrorResponse
+from app.schemas.conversation import ConversationDetailResponse
 from app.services.activity_system_service import ActivitySystemService
 
 router = APIRouter(
@@ -215,3 +216,39 @@ def invite_connections(
         connection_ids=req.connection_ids,
     )
     return {"status": "success", "invited_count": invited_count}
+
+
+@router.get(
+    "/{activity_id}/conversation",
+    response_model=ConversationDetailResponse,
+    summary="Get Activity Group Conversation",
+)
+def get_activity_conversation(
+    activity_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Get the group conversation associated with an activity.
+    Verifies user participant authorization.
+    """
+    from app.models.activity_system import Activity
+    from app.services.conversation_service import ConversationService
+    from app.core.errors import ActivityNotFoundException
+
+    act = db.query(Activity).filter(Activity.id == activity_id).first()
+    if not act:
+        raise ActivityNotFoundException("Activity not found.")
+
+    if not act.conversation_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No conversation is associated with this activity.",
+        )
+
+    return ConversationService.get_conversation_detail(
+        db=db,
+        conversation_id=act.conversation_id,
+        current_user_id=current_user.id,
+    )
+

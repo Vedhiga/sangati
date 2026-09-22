@@ -55,6 +55,7 @@ class Activity(Base):
     private_notes = Column(Text, nullable=True)
 
     status = Column(String(20), nullable=False, default=ActivityStatus.ACTIVE.value, index=True)
+    conversation_id = Column(GUID, ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), server_default=func.now(), nullable=False)
     ended_at = Column(DateTime(timezone=True), nullable=True)

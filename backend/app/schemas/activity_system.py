@@ -58,6 +58,7 @@ class PublicActivityResponse(BaseModel):
     participant_limit: Optional[int] = 10
     participant_count: int = 1
     status: str = "ACTIVE"
+    conversation_id: Optional[UUID] = None
     host: ActivityHostPublic
     created_at: datetime
     public_participants: List[ActivityParticipantPublic] = []

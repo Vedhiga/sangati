@@ -7,7 +7,7 @@ import { INTENT_META_MAP, formatRecurrenceLabel } from "@/lib/activity/activity-
 import { ElasticStack, ElasticStackItem } from "@/components/ui/elastic-stack";
 import { LiquidMetalButton } from "@/components/ui/liquid-metal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, Calendar, ArrowRight, Check } from "lucide-react";
+import { Users, Calendar, ArrowRight, Check, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ActivityCardProps {
@@ -16,6 +16,7 @@ interface ActivityCardProps {
   isHost?: boolean;
   onJoin?: (id: string) => void;
   onJoinToggle?: (e?: React.MouseEvent) => void;
+  onActivityChat?: (activity: PublicActivity) => void;
   className?: string;
 }
 
@@ -25,6 +26,7 @@ export function ActivityCard({
   isHost = activity.is_host || false,
   onJoin,
   onJoinToggle,
+  onActivityChat,
   className,
 }: ActivityCardProps) {
   const intentMeta = INTENT_META_MAP[activity.intent] || INTENT_META_MAP.BUILD;
@@ -46,7 +48,15 @@ export function ActivityCard({
     }
   };
 
+  const handleChatClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onActivityChat) {
+      onActivityChat(activity);
+    }
+  };
+
   const isFull = activity.participant_count >= (activity.participant_limit || activity.max_participants || 10);
+  const isEnded = activity.status === "ENDED";
   const isInactive = activity.status !== "ACTIVE";
 
   return (
@@ -135,7 +145,7 @@ export function ActivityCard({
       </div>
 
       {/* Card Bottom: Host info & Action CTA */}
-      <div className="pt-3 flex items-center justify-between gap-3 relative z-10">
+      <div className="pt-3 flex flex-wrap items-center justify-between gap-3 relative z-10">
         <div className="flex items-center gap-2 min-w-0">
           <Avatar className="w-7 h-7 border border-white/10 shrink-0">
             <AvatarImage src={activity.host.avatar_url} />
@@ -150,7 +160,19 @@ export function ActivityCard({
           </div>
         </div>
 
-        <div className="shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          {onActivityChat && (
+            <button
+              onClick={handleChatClick}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-200 transition-all"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
+              <span>
+                {isEnded ? "View Activity Chat" : isParticipant ? "Activity Chat" : "Join Activity Chat"}
+              </span>
+            </button>
+          )}
+
           {isParticipant ? (
             <Link href={`/activities/${activity.id}`}>
               <LiquidMetalButton size="sm" icon={<Check className="w-3.5 h-3.5 text-emerald-400" />}>
