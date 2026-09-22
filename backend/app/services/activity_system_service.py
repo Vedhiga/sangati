@@ -144,7 +144,7 @@ class ActivitySystemService:
                     participant_limit=act.max_participants,
                     participant_count=len(participants),
                     status=act.status,
-                    conversation_id=act.conversation_id,
+                    conversation_id=getattr(act, "conversation_id", None),
                     host=ActivitySystemService._build_host_public(host_map.get(act.host_user_id), act.host_user_id),
                     created_at=act.created_at or datetime.now(timezone.utc),
                     public_participants=participants,
@@ -227,7 +227,7 @@ class ActivitySystemService:
                 participant_limit=act.max_participants,
                 participant_count=len(participants),
                 status=act.status,
-                conversation_id=act.conversation_id,
+                conversation_id=getattr(act, "conversation_id", None),
                 host=host_public,
                 created_at=act.created_at or datetime.now(timezone.utc),
                 public_participants=participants,
@@ -260,7 +260,7 @@ class ActivitySystemService:
             participant_limit=act.max_participants,
             participant_count=len(participants),
             status=act.status,
-            conversation_id=act.conversation_id,
+            conversation_id=getattr(act, "conversation_id", None),
             host=host_public,
             created_at=act.created_at or datetime.now(timezone.utc),
             public_participants=participants,
@@ -384,8 +384,9 @@ class ActivitySystemService:
 
         # Ensure conversation exists and sync user as conversation participant
         convo = None
-        if act.conversation_id:
-            convo = db.query(Conversation).filter(Conversation.id == act.conversation_id).first()
+        convo_id = getattr(act, "conversation_id", None)
+        if convo_id:
+            convo = db.query(Conversation).filter(Conversation.id == convo_id).first()
 
         if not convo:
             convo = Conversation(
@@ -397,7 +398,8 @@ class ActivitySystemService:
             )
             db.add(convo)
             db.flush()
-            act.conversation_id = convo.id
+            if hasattr(act, "conversation_id"):
+                act.conversation_id = convo.id
 
         convo_part = (
             db.query(ConversationParticipant)
@@ -440,11 +442,12 @@ class ActivitySystemService:
             part.left_at = datetime.now(timezone.utc)
 
             # Sync: Remove from conversation participants so user loses active sending privileges
-            if act.conversation_id:
+            convo_id = getattr(act, "conversation_id", None)
+            if convo_id:
                 cp = (
                     db.query(ConversationParticipant)
                     .filter(
-                        ConversationParticipant.conversation_id == act.conversation_id,
+                        ConversationParticipant.conversation_id == convo_id,
                         ConversationParticipant.user_id == user_id,
                     )
                     .first()
