@@ -57,7 +57,7 @@ const ACTIVITY_MAP: Record<ActivityType, ActivityMeta> = {
   },
   CONVERSATION: {
     type: "CONVERSATION",
-    label: "Conversation",
+    label: "Discussion",
     verb: "open to discussion",
     icon: MessageSquare,
     accentColor: "text-violet-400",

@@ -49,7 +49,7 @@ const FILTER_TABS: FilterOption[] = [
   },
   { 
     type: "CONVERSATION", 
-    label: "Conversation", 
+    label: "Discussion", 
     icon: MessageSquare,
     activeClass: "bg-pink-600 text-white shadow-md shadow-pink-500/20" 
   },

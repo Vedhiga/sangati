@@ -78,7 +78,7 @@ export default function ActivityLabPage() {
             Explore persistent community spaces built around{" "}
             <strong className="text-[#C9A84A] font-medium">Build</strong>,{" "}
             <strong className="text-[#C9A84A] font-medium">Learn</strong>,{" "}
-            <strong className="text-[#C9A84A] font-medium">Conversation</strong>, and{" "}
+            <strong className="text-[#C9A84A] font-medium">Discussion</strong>, and{" "}
             <strong className="text-[#C9A84A] font-medium">Explore</strong> intents.
           </p>
         </div>

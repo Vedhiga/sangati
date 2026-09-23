@@ -42,7 +42,7 @@ const ACTIVITIES: ActivityOption[] = [
   },
   {
     type: "CONVERSATION",
-    title: "Have a conversation",
+    title: "Have a discussion",
     description: "Discuss ideas and exchange perspectives with curious companions.",
     icon: MessageSquare,
     accentColor: "text-violet-400",

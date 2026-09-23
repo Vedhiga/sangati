@@ -51,7 +51,7 @@ const ACTIVITY_MAP: Record<ActivityType, ActivityMeta> = {
   },
   CONVERSATION: {
     type: "CONVERSATION",
-    label: "Conversation",
+    label: "Discussion",
     icon: MessageSquare,
     badgeBg: "bg-white/10 text-white border-white/20",
   },

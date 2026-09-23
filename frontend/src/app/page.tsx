@@ -46,11 +46,8 @@ export default function HomePage() {
           </h1>
 
           <div className="pt-2">
-            <p className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-2">
-              Active Intent Mode:
-            </p>
             <FlipFadeText
-              words={["BUILD", "LEARN", "CONVERSATION", "EXPLORE"]}
+              words={["BUILD", "LEARN", "DISCUSSION", "EXPLORE"]}
               className="justify-start min-h-[60px]"
               textClassName="text-3xl sm:text-5xl md:text-6xl font-extrabold text-[#D4AF37] tracking-wider"
             />

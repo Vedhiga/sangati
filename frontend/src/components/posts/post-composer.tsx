@@ -55,7 +55,7 @@ const ACTIVITIES: ActivityMeta[] = [
   },
   {
     type: "CONVERSATION",
-    label: "Conversation",
+    label: "Discussion",
     icon: MessageSquare,
     prompt: "Start an open, thoughtful discussion...",
     accentClass: "text-violet-400",

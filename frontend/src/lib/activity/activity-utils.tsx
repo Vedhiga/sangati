@@ -31,7 +31,7 @@ export const INTENT_META_MAP: Record<IntentType, IntentMeta> = {
   },
   CONVERSATION: {
     type: "CONVERSATION",
-    label: "CONVERSATION",
+    label: "DISCUSSION",
     verb: "Open discussion",
     icon: MessageSquare,
     accentColor: "text-violet-400",

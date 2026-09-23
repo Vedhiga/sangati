@@ -62,7 +62,7 @@ const ACTIVITIES: Record<ActivityType, ActivityMeta> = {
   },
   CONVERSATION: {
     type: "CONVERSATION",
-    label: "Conversation",
+    label: "Discussion",
     verb: "Open to discussion",
     icon: MessageSquare,
     accentColor: "text-violet-400",

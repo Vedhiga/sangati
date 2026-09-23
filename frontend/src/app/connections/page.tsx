@@ -46,7 +46,7 @@ interface ActivityMeta {
 const ACTIVITY_MAP: Record<ActivityType, ActivityMeta> = {
   BUILD: { type: "BUILD", label: "Build", icon: Hammer, badgeBg: "bg-orange-500/10 text-orange-400 border-orange-500/20" },
   LEARN: { type: "LEARN", label: "Learn", icon: Brain, badgeBg: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
-  CONVERSATION: { type: "CONVERSATION", label: "Conversation", icon: MessageSquare, badgeBg: "bg-violet-500/10 text-violet-400 border-violet-500/20" },
+  CONVERSATION: { type: "CONVERSATION", label: "Discussion", icon: MessageSquare, badgeBg: "bg-violet-500/10 text-violet-400 border-violet-500/20" },
   EXPLORE: { type: "EXPLORE", label: "Explore", icon: Sparkles, badgeBg: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
 };
 
