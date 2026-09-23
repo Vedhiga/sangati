@@ -14,8 +14,11 @@ import {
   Clock,
   ExternalLink,
   Globe,
+  Heart,
+  MessageCircle,
+  Send,
 } from "lucide-react";
-import { ActivityType, Post } from "@/types";
+import { ActivityType, Post, Comment, CommentsListResponse } from "@/types";
 import { api, ApiClientError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -63,6 +66,14 @@ const ACTIVITY_MAP: Record<ActivityType, ActivityMeta> = {
   },
 };
 
+const EMOJI_REACTIONS: { type: string; emoji: string }[] = [
+  { type: "THUMBS_UP", emoji: "👍" },
+  { type: "HEART", emoji: "❤️" },
+  { type: "FIRE", emoji: "🔥" },
+  { type: "ROCKET", emoji: "🚀" },
+  { type: "LIGHTBULB", emoji: "💡" },
+];
+
 function formatRelativeTime(dateString: string): string {
   try {
     const date = new Date(dateString);
@@ -89,17 +100,31 @@ function formatRelativeTime(dateString: string): string {
 }
 
 export function PostCard({
-  post,
+  post: initialPost,
   currentUserId,
   onPostUpdated,
   onPostDeleted,
 }: PostCardProps) {
+  const [post, setPost] = useState<Post>(initialPost);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Interaction State
+  const [isLiking, setIsLiking] = useState(false);
+  const [isReacting, setIsReacting] = useState<string | null>(null);
+
+  // Comments State
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentsCount, setCommentsCount] = useState(post.comments_count || 0);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
 
   const isAuthor = currentUserId && post.author_id === currentUserId;
   const activityMeta = ACTIVITY_MAP[post.activity_type] || ACTIVITY_MAP.BUILD;
@@ -132,6 +157,7 @@ export function PostCard({
       const updated = await api.put<Post>(`/api/v1/posts/${post.id}`, {
         content: trimmed,
       });
+      setPost(updated);
       setIsEditing(false);
       onPostUpdated?.(updated);
     } catch (err) {
@@ -161,7 +187,88 @@ export function PostCard({
     }
   };
 
-  // Helper for domain extraction
+  // --- LIKE TOGGLE ---
+  const handleToggleLike = async () => {
+    if (isLiking || !currentUserId) return;
+    setIsLiking(true);
+    try {
+      const updated = await api.post<Post>(`/api/v1/posts/${post.id}/like`);
+      setPost(updated);
+    } catch (err) {
+      console.error("Failed to toggle like:", err);
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  // --- REACTION TOGGLE ---
+  const handleToggleReaction = async (reactionType: string) => {
+    if (isReacting || !currentUserId) return;
+    setIsReacting(reactionType);
+    try {
+      const updated = await api.post<Post>(`/api/v1/posts/${post.id}/reactions`, {
+        reaction_type: reactionType,
+      });
+      setPost(updated);
+    } catch (err) {
+      console.error("Failed to toggle reaction:", err);
+    } finally {
+      setIsReacting(null);
+    }
+  };
+
+  // --- COMMENTS LOAD & SUBMIT ---
+  const toggleCommentsSection = async () => {
+    const nextShow = !showComments;
+    setShowComments(nextShow);
+    if (nextShow && comments.length === 0) {
+      setIsLoadingComments(true);
+      try {
+        const res = await api.get<CommentsListResponse>(`/api/v1/posts/${post.id}/comments`);
+        setComments(res.comments);
+        setCommentsCount(res.total);
+      } catch (err) {
+        console.error("Failed to fetch comments:", err);
+      } finally {
+        setIsLoadingComments(false);
+      }
+    }
+  };
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newComment.trim();
+    if (!trimmed || isSubmittingComment || !currentUserId) return;
+
+    setIsSubmittingComment(true);
+    try {
+      const added = await api.post<Comment>(`/api/v1/posts/${post.id}/comments`, {
+        content: trimmed,
+      });
+      setComments((prev) => [...prev, added]);
+      setCommentsCount((prev) => prev + 1);
+      setNewComment("");
+    } catch (err) {
+      console.error("Failed to add comment:", err);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (deletingCommentId || !currentUserId) return;
+    setDeletingCommentId(commentId);
+    try {
+      await api.delete(`/api/v1/posts/${post.id}/comments/${commentId}`);
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+      setCommentsCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Failed to delete comment:", err);
+    } finally {
+      setDeletingCommentId(null);
+    }
+  };
+
   const getDomain = (url: string) => {
     try {
       return new URL(url).hostname.replace("www.", "");
@@ -236,7 +343,7 @@ export function PostCard({
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               className="text-sm min-h-[80px] bg-[#0A0A0A] border-white/15 text-[#F5F5F3] focus:border-white/30"
-              maxLength={550}
+              maxLength={500}
               autoFocus
             />
             {error && <p className="text-xs text-rose-400">{error}</p>}
@@ -347,7 +454,7 @@ export function PostCard({
               </a>
             )}
 
-            {/* MEDIA ATTACHMENT (IMAGE / VIDEO) */}
+            {/* MEDIA ATTACHMENT */}
             {post.media_url && (
               <div className="rounded-xl overflow-hidden border border-white/[0.08] bg-black">
                 {post.media_type === "video" ? (
@@ -364,6 +471,166 @@ export function PostCard({
                     className="w-full max-h-96 object-cover"
                   />
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* INTERACTION BAR: LIKES, REACTION PICKER, COMMENTS TOGGLE */}
+        <div className="pt-3 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Like Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleToggleLike}
+              disabled={isLiking}
+              className={`h-8 px-3 rounded-full text-xs font-mono gap-1.5 transition-colors ${
+                post.is_liked_by_user
+                  ? "text-rose-400 bg-rose-500/10 border border-rose-500/20"
+                  : "text-[#8A8A8A] hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <Heart className={`h-3.5 w-3.5 ${post.is_liked_by_user ? "fill-rose-400 text-rose-400" : ""}`} />
+              <span>{post.likes_count || 0}</span>
+            </Button>
+
+            {/* Reaction Emoji Buttons */}
+            <div className="flex items-center gap-1 bg-white/[0.02] border border-white/10 rounded-full px-1.5 py-0.5">
+              {EMOJI_REACTIONS.map(({ type, emoji }) => {
+                const count = post.reactions_summary?.[type] || 0;
+                const isReacted = post.user_reactions?.includes(type);
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => handleToggleReaction(type)}
+                    className={`h-7 px-2 rounded-full text-xs flex items-center gap-1 transition-all ${
+                      isReacted
+                        ? "bg-white/15 border border-white/30 text-white scale-105"
+                        : "hover:bg-white/10 text-[#8A8A8A]"
+                    }`}
+                    title={type}
+                  >
+                    <span>{emoji}</span>
+                    {count > 0 && <span className="text-[10px] font-mono">{count}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Comments Toggle Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleCommentsSection}
+            className="h-8 px-3 rounded-full text-xs font-mono gap-1.5 text-[#8A8A8A] hover:text-white hover:bg-white/5"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            <span>{commentsCount} {commentsCount === 1 ? "Comment" : "Comments"}</span>
+          </Button>
+        </div>
+
+        {/* EXPANDABLE COMMENTS SECTION */}
+        {showComments && (
+          <div className="pt-3 space-y-3 border-t border-white/[0.06] animate-fade-in">
+            {/* Comment Form */}
+            {currentUserId ? (
+              <form onSubmit={handleAddComment} className="flex items-center gap-2">
+                <Textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Write a quiet comment..."
+                  className="text-xs min-h-[38px] max-h-[100px] py-2 bg-[#0A0A0A] border-white/15 text-[#F5F5F3] focus:border-white/30 rounded-xl resize-none"
+                  maxLength={500}
+                />
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isSubmittingComment || !newComment.trim()}
+                  className="h-9 px-3 bg-[#F5F5F3] text-black hover:bg-white shrink-0 rounded-xl"
+                >
+                  {isSubmittingComment ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </form>
+            ) : (
+              <p className="text-xs text-[#8A8A8A] italic">Log in to comment.</p>
+            )}
+
+            {/* Comments List */}
+            {isLoadingComments ? (
+              <div className="py-4 text-center">
+                <Loader2 className="h-4 w-4 animate-spin text-[#8A8A8A] mx-auto" />
+              </div>
+            ) : comments.length === 0 ? (
+              <p className="text-xs text-[#8A8A8A] italic py-2 text-center">No comments yet. Be the first to share a perspective!</p>
+            ) : (
+              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                {comments.map((comment) => {
+                  const isCommentAuthor = currentUserId && comment.author_id === currentUserId;
+                  const cInitials = comment.author.display_name
+                    ? comment.author.display_name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2)
+                    : "C";
+
+                  return (
+                    <div
+                      key={comment.id}
+                      className="p-3 rounded-xl border border-white/[0.06] bg-white/[0.015] flex items-start justify-between gap-3 text-xs"
+                    >
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <Avatar className="h-7 w-7 border border-white/10 shrink-0 mt-0.5">
+                          <AvatarImage src={comment.author.avatar_url || undefined} alt={comment.author.display_name} />
+                          <AvatarFallback className="bg-zinc-900 text-[#F5F5F3] text-[10px] font-semibold">
+                            {cInitials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-[#F5F5F3] truncate">
+                              {comment.author.display_name}
+                            </span>
+                            <span className="font-mono text-[#8A8A8A] text-[10px]">
+                              @{comment.author.username}
+                            </span>
+                            <span className="text-[10px] text-[#8A8A8A] font-mono">
+                              • {formatRelativeTime(comment.created_at)}
+                            </span>
+                          </div>
+                          <p className="text-[#F5F5F3] leading-relaxed whitespace-pre-wrap break-words font-normal">
+                            {comment.content}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Delete comment action */}
+                      {isCommentAuthor && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={deletingCommentId === comment.id}
+                          onClick={() => handleDeleteComment(comment.id)}
+                          className="h-6 w-6 p-0 text-[#8A8A8A] hover:text-rose-400 hover:bg-white/5 shrink-0"
+                        >
+                          {deletingCommentId === comment.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3 w-3" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

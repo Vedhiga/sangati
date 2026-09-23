@@ -132,8 +132,28 @@ export interface Post {
   link_description?: string | null;
   link_image?: string | null;
   author: AuthorPublic;
+  likes_count?: number;
+  is_liked_by_user?: boolean;
+  user_reactions?: string[];
+  reactions_summary?: Record<string, number>;
+  comments_count?: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface Comment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  content: string;
+  author: AuthorPublic;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommentsListResponse {
+  comments: Comment[];
+  total: number;
 }
 
 export interface PostCreate {
@@ -181,6 +201,7 @@ export interface Message {
   id: string;
   conversation_id: string;
   sender_id: string;
+  sender?: ConnectionUserPublic | null;
   content: string;
   created_at: string;
 }

@@ -10,6 +10,10 @@ from app.schemas.post import (
     PostUpdate,
     PostResponse,
     PostsListResponse,
+    CommentCreate,
+    CommentResponse,
+    CommentsListResponse,
+    ReactionToggleRequest,
 )
 from app.schemas.activity import ActivityType
 from app.services.post_service import PostService
@@ -56,6 +60,7 @@ def get_posts(
         activity_type=activity,
         limit=limit,
         offset=offset,
+        current_user_id=current_user.id,
     )
 
 
@@ -79,6 +84,7 @@ def get_user_posts(
         user_id=user_id,
         limit=limit,
         offset=offset,
+        current_user_id=current_user.id,
     )
 
 
@@ -122,3 +128,106 @@ def delete_post(
         current_user_id=current_user.id,
     )
     return {"success": True, "message": "Post deleted successfully."}
+
+
+# --- LIKES & REACTIONS ---
+@router.post(
+    "/{post_id}/like",
+    response_model=PostResponse,
+    summary="Toggle like on a post",
+)
+def toggle_like(
+    post_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Add or remove a like on a post.
+    """
+    return PostService.toggle_like(db, post_id, current_user.id)
+
+
+@router.post(
+    "/{post_id}/reactions",
+    response_model=PostResponse,
+    summary="Toggle emoji reaction on a post",
+)
+def toggle_reaction(
+    post_id: UUID,
+    data: ReactionToggleRequest,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Add or toggle an emoji reaction on a post.
+    """
+    return PostService.toggle_reaction(db, post_id, current_user.id, data.reaction_type)
+
+
+@router.delete(
+    "/{post_id}/reactions/{reaction_type}",
+    response_model=PostResponse,
+    summary="Remove emoji reaction from a post",
+)
+def remove_reaction(
+    post_id: UUID,
+    reaction_type: str,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Explicitly remove a reaction type from a post.
+    """
+    return PostService.remove_reaction(db, post_id, current_user.id, reaction_type)
+
+
+# --- COMMENTS ---
+@router.get(
+    "/{post_id}/comments",
+    response_model=CommentsListResponse,
+    summary="Get comments for a post",
+)
+def get_comments(
+    post_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Get all comments for a specific post.
+    """
+    return PostService.get_comments(db, post_id)
+
+
+@router.post(
+    "/{post_id}/comments",
+    response_model=CommentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a comment to a post",
+)
+def create_comment(
+    post_id: UUID,
+    data: CommentCreate,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Add a new comment to a post.
+    """
+    return PostService.create_comment(db, post_id, current_user.id, data)
+
+
+@router.delete(
+    "/{post_id}/comments/{comment_id}",
+    summary="Delete own comment on a post",
+)
+def delete_comment(
+    post_id: UUID,
+    comment_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Delete a comment. Only the comment author can delete it.
+    """
+    PostService.delete_comment(db, post_id, comment_id, current_user.id)
+    return {"success": True, "message": "Comment deleted successfully."}

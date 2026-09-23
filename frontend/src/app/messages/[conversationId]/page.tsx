@@ -636,6 +636,18 @@ export default function ConversationDetailPage() {
                       isMine ? "items-end" : "items-start"
                     }`}
                   >
+                    {/* Sender Header */}
+                    <div className="flex items-center gap-1.5 px-1 mb-1 text-[11px] font-mono text-[#8A8A8A]">
+                      <span className="font-semibold text-[#F5F5F3]">
+                        {isMine
+                          ? "You"
+                          : msg.sender?.display_name || "Companion"}
+                      </span>
+                      {msg.sender?.username && (
+                        <span className="text-[10px] opacity-75">(@{msg.sender.username})</span>
+                      )}
+                    </div>
+
                     <div
                       className={`max-w-[85%] sm:max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
                         isMine

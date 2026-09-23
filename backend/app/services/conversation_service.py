@@ -365,17 +365,30 @@ class ConversationService:
             .all()
         )
 
-        return MessagesListResponse(
-            messages=[
+        sender_ids = list({m.sender_id for m in messages})
+        sender_profiles = db.query(Profile).filter(Profile.user_id.in_(sender_ids)).all() if sender_ids else []
+        profile_map = {p.user_id: p for p in sender_profiles}
+
+        user_acts = db.query(UserActivity).filter(UserActivity.user_id.in_(sender_ids)).all() if sender_ids else []
+        act_map = {ua.user_id: ua.activity_type for ua in user_acts}
+
+        message_responses = []
+        for m in messages:
+            prof = profile_map.get(m.sender_id)
+            sender_public = _build_public_user(prof, act_map.get(m.sender_id)) if prof else None
+            message_responses.append(
                 MessageResponse(
                     id=m.id,
                     conversation_id=m.conversation_id,
                     sender_id=m.sender_id,
+                    sender=sender_public,
                     content=m.content,
                     created_at=m.created_at,
                 )
-                for m in messages
-            ],
+            )
+
+        return MessagesListResponse(
+            messages=message_responses,
             total=total,
             limit=limit,
             offset=offset,
@@ -459,10 +472,14 @@ class ConversationService:
 
         logger.info("User %s sent message %s in conversation %s", current_user_id, msg.id, conversation_id)
 
+        sender_act = db.query(UserActivity).filter(UserActivity.user_id == current_user_id).first()
+        sender_public = _build_public_user(sender_prof, sender_act.activity_type if sender_act else None) if sender_prof else None
+
         return MessageResponse(
             id=msg.id,
             conversation_id=msg.conversation_id,
             sender_id=msg.sender_id,
+            sender=sender_public,
             content=msg.content,
             created_at=msg.created_at,
         )

@@ -27,6 +27,7 @@ class MessageResponse(BaseModel):
     id: UUID
     conversation_id: UUID
     sender_id: UUID
+    sender: Optional[ConnectionUserPublic] = None
     content: str
     created_at: datetime
 

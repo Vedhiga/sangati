@@ -2,6 +2,7 @@ from app.models.profile import Profile
 from app.models.activity import UserActivity
 from app.models.connection import Connection, ConnectionStatus
 from app.models.post import ActivityPost
+from app.models.post_interactions import PostLike, PostReaction, PostComment
 from app.models.conversation import Conversation, ConversationParticipant, Message
 from app.models.notification import Notification, NotificationType
 from app.models.activity_system import (
@@ -21,6 +22,9 @@ __all__ = [
     "Connection",
     "ConnectionStatus",
     "ActivityPost",
+    "PostLike",
+    "PostReaction",
+    "PostComment",
     "Conversation",
     "ConversationParticipant",
     "Message",
