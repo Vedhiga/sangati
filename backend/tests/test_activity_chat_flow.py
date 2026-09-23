@@ -155,3 +155,79 @@ def test_activity_chat_lifecycle_integration(
         headers=headers_host,
     )
     assert res_post_end.status_code == 403
+
+
+def test_legacy_activity_conversation_flow(
+    client: TestClient,
+    db_session: Session,
+):
+    # 1. Setup Host & Participant Profiles
+    host_id = uuid4()
+    participant_id = uuid4()
+    stranger_id = uuid4()
+
+    db_session.add(Profile(user_id=host_id, username=f"host_{str(host_id)[:6]}", display_name="Legacy Host"))
+    db_session.add(Profile(user_id=participant_id, username=f"part_{str(participant_id)[:6]}", display_name="Legacy Participant"))
+    db_session.add(Profile(user_id=stranger_id, username=f"stranger_{str(stranger_id)[:6]}", display_name="Stranger User"))
+    db_session.commit()
+
+    headers_host = {"Authorization": f"Bearer {create_mock_jwt(host_id)}"}
+    headers_part = {"Authorization": f"Bearer {create_mock_jwt(participant_id)}"}
+    headers_stranger = {"Authorization": f"Bearer {create_mock_jwt(stranger_id)}"}
+
+    # 2. Insert a LEGACY Activity with conversation_id = NULL
+    legacy_act = Activity(
+        host_user_id=host_id,
+        intent_type="LEARN",
+        title="Legacy AI Research Group",
+        description="Created before migration 011",
+        activity_type="RECURRING",
+        frequency="WEEKLY",
+        duration_minutes=60,
+        max_participants=5,
+        meeting_platform="Google Meet",
+        meeting_url="https://meet.google.com/legacy-ai",
+        status="ACTIVE",
+        conversation_id=None,  # Legacy state
+    )
+    db_session.add(legacy_act)
+    db_session.flush()
+
+    # Add host and participant to activity_participants
+    db_session.add(ActivityParticipant(activity_id=legacy_act.id, user_id=host_id, status=ParticipantStatus.JOINED.value))
+    db_session.add(ActivityParticipant(activity_id=legacy_act.id, user_id=participant_id, status=ParticipantStatus.JOINED.value))
+    db_session.commit()
+
+    # 3. GET conversation for legacy activity -> Must idempotently create 1 conversation
+    res_get1 = client.get(f"/api/v1/activities/{legacy_act.id}/conversation", headers=headers_host)
+    assert res_get1.status_code == 200, res_get1.text
+    convo_data1 = res_get1.json()
+    convo_id = convo_data1["id"]
+    assert convo_data1["conversation_type"] == "ACTIVITY"
+
+    # Verify activity.conversation_id was updated in DB
+    db_session.refresh(legacy_act)
+    assert str(legacy_act.conversation_id) == str(convo_id)
+
+    # 4. Requesting conversation a SECOND time -> Idempotent, returns exact same conversation
+    res_get2 = client.get(f"/api/v1/activities/{legacy_act.id}/conversation", headers=headers_host)
+    assert res_get2.status_code == 200
+    assert res_get2.json()["id"] == convo_id
+
+    # Verify no duplicate conversations were created for this activity
+    convo_count = db_session.query(Conversation).filter(Conversation.activity_id == legacy_act.id).count()
+    assert convo_count == 1
+
+    # 5. Non-participant (Stranger) attempts to get activity conversation -> 403 Forbidden (not 500)
+    res_stranger = client.get(f"/api/v1/activities/{legacy_act.id}/conversation", headers=headers_stranger)
+    assert res_stranger.status_code == 403
+
+    # 6. Joined participant gets conversation detail -> 200 OK
+    res_part = client.get(f"/api/v1/activities/{legacy_act.id}/conversation", headers=headers_part)
+    assert res_part.status_code == 200
+    assert res_part.json()["id"] == convo_id
+
+    # 7. Non-existent activity ID -> 404 Not Found
+    res_404 = client.get(f"/api/v1/activities/{uuid4()}/conversation", headers=headers_host)
+    assert res_404.status_code == 404
+

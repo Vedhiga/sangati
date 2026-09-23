@@ -269,6 +269,64 @@ class ActivitySystemService:
         )
 
     @staticmethod
+    def ensure_activity_conversation(db: Session, act: Activity) -> Conversation:
+        """
+        Idempotently ensure that an Activity has an associated group Conversation.
+        Handles legacy activities where conversation_id is NULL.
+        Returns the associated Conversation model instance.
+        """
+        convo = None
+        convo_id = getattr(act, "conversation_id", None)
+        if convo_id:
+            convo = db.query(Conversation).filter(Conversation.id == convo_id).first()
+
+        if not convo:
+            convo = db.query(Conversation).filter(Conversation.activity_id == act.id).first()
+
+        if not convo:
+            status_val = "ARCHIVED" if act.status == ActivityStatus.ENDED.value else "ACTIVE"
+            convo = Conversation(
+                title=f"Activity: {act.title.strip()}",
+                is_group=True,
+                conversation_type="ACTIVITY",
+                activity_id=act.id,
+                status=status_val,
+            )
+            db.add(convo)
+            db.flush()
+
+        if hasattr(act, "conversation_id") and getattr(act, "conversation_id", None) != convo.id:
+            act.conversation_id = convo.id
+
+        # Sync active activity participants into conversation
+        active_parts = (
+            db.query(ActivityParticipant)
+            .filter(
+                ActivityParticipant.activity_id == act.id,
+                ActivityParticipant.status == ParticipantStatus.JOINED.value,
+            )
+            .all()
+        )
+
+        existing_cp_uids = {
+            cp.user_id
+            for cp in db.query(ConversationParticipant)
+            .filter(ConversationParticipant.conversation_id == convo.id)
+            .all()
+        }
+
+        user_ids_to_sync = {p.user_id for p in active_parts}
+        if act.host_user_id:
+            user_ids_to_sync.add(act.host_user_id)
+
+        for uid in user_ids_to_sync:
+            if uid not in existing_cp_uids:
+                db.add(ConversationParticipant(conversation_id=convo.id, user_id=uid))
+
+        db.flush()
+        return convo
+
+    @staticmethod
     def create_activity(
         db: Session,
         host_id: UUID,
@@ -294,32 +352,17 @@ class ActivitySystemService:
         db.add(act)
         db.flush()
 
-        # Create associated activity group conversation
-        convo = Conversation(
-            title=f"Activity: {req.title.strip()}",
-            is_group=True,
-            conversation_type="ACTIVITY",
-            activity_id=act.id,
-            status="ACTIVE",
-        )
-        db.add(convo)
-        db.flush()
-
-        act.conversation_id = convo.id
-
-        # Add host as first participant in activity & conversation
+        # Add host as first participant in activity
         host_part = ActivityParticipant(
             activity_id=act.id,
             user_id=host_id,
             status=ParticipantStatus.JOINED.value,
         )
         db.add(host_part)
+        db.flush()
 
-        convo_part = ConversationParticipant(
-            conversation_id=convo.id,
-            user_id=host_id,
-        )
-        db.add(convo_part)
+        # Ensure associated group conversation & host participant mapping
+        ActivitySystemService.ensure_activity_conversation(db, act)
 
         # Create initial upcoming session
         initial_sess = ActivitySession(
@@ -384,23 +427,8 @@ class ActivitySystemService:
 
         # Ensure conversation exists and sync user as conversation participant
         convo = None
-        convo_id = getattr(act, "conversation_id", None)
-        if convo_id:
-            convo = db.query(Conversation).filter(Conversation.id == convo_id).first()
-
-        if not convo:
-            convo = Conversation(
-                title=f"Activity: {act.title}",
-                is_group=True,
-                conversation_type="ACTIVITY",
-                activity_id=act.id,
-                status="ACTIVE",
-            )
-            db.add(convo)
-            db.flush()
-            if hasattr(act, "conversation_id"):
-                act.conversation_id = convo.id
-
+        # Ensure conversation exists and sync user as conversation participant
+        convo = ActivitySystemService.ensure_activity_conversation(db, act)
         convo_part = (
             db.query(ConversationParticipant)
             .filter(
@@ -442,18 +470,17 @@ class ActivitySystemService:
             part.left_at = datetime.now(timezone.utc)
 
             # Sync: Remove from conversation participants so user loses active sending privileges
-            convo_id = getattr(act, "conversation_id", None)
-            if convo_id:
-                cp = (
-                    db.query(ConversationParticipant)
-                    .filter(
-                        ConversationParticipant.conversation_id == convo_id,
-                        ConversationParticipant.user_id == user_id,
-                    )
-                    .first()
+            convo = ActivitySystemService.ensure_activity_conversation(db, act)
+            cp = (
+                db.query(ConversationParticipant)
+                .filter(
+                    ConversationParticipant.conversation_id == convo.id,
+                    ConversationParticipant.user_id == user_id,
                 )
-                if cp:
-                    db.delete(cp)
+                .first()
+            )
+            if cp:
+                db.delete(cp)
 
             db.commit()
 
@@ -510,10 +537,8 @@ class ActivitySystemService:
         act.ended_at = datetime.now(timezone.utc)
 
         # Archive conversation (read-only historical access preserved)
-        if act.conversation_id:
-            convo = db.query(Conversation).filter(Conversation.id == act.conversation_id).first()
-            if convo:
-                convo.status = "ARCHIVED"
+        convo = ActivitySystemService.ensure_activity_conversation(db, act)
+        convo.status = "ARCHIVED"
 
         db.commit()
         return ActivitySystemService.get_activity_detail(db, activity_id, user_id)

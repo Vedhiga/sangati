@@ -233,22 +233,22 @@ def get_activity_conversation(
     Verifies user participant authorization.
     """
     from app.models.activity_system import Activity
+    from app.services.activity_system_service import ActivitySystemService
     from app.services.conversation_service import ConversationService
-    from app.core.errors import ActivityNotFoundException
 
     act = db.query(Activity).filter(Activity.id == activity_id).first()
     if not act:
-        raise ActivityNotFoundException("Activity not found.")
-
-    if not act.conversation_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No conversation is associated with this activity.",
+            detail="Activity not found.",
         )
+
+    convo = ActivitySystemService.ensure_activity_conversation(db, act)
+    db.commit()
 
     return ConversationService.get_conversation_detail(
         db=db,
-        conversation_id=act.conversation_id,
+        conversation_id=convo.id,
         current_user_id=current_user.id,
     )
 
