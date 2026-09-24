@@ -73,14 +73,14 @@ def _enrich_posts_metadata(
         )
         user_liked_post_ids = {ul[0] for ul in user_likes}
 
-    # Reactions summary & user reactions
+    # Reactions summary & user reactions (single reaction per user)
     all_reactions = (
         db.query(PostReaction.post_id, PostReaction.user_id, PostReaction.reaction_type)
         .filter(PostReaction.post_id.in_(post_ids))
         .all()
     )
     reactions_summary_map: Dict[UUID, Dict[str, int]] = {}
-    user_reactions_map: Dict[UUID, List[str]] = {}
+    user_reaction_map: Dict[UUID, Optional[str]] = {}
 
     for p_id, u_id, r_type in all_reactions:
         # summary
@@ -88,12 +88,9 @@ def _enrich_posts_metadata(
             reactions_summary_map[p_id] = {}
         reactions_summary_map[p_id][r_type] = reactions_summary_map[p_id].get(r_type, 0) + 1
 
-        # user reactions
+        # single user reaction per post
         if current_user_id and u_id == current_user_id:
-            if p_id not in user_reactions_map:
-                user_reactions_map[p_id] = []
-            if r_type not in user_reactions_map[p_id]:
-                user_reactions_map[p_id].append(r_type)
+            user_reaction_map[p_id] = r_type
 
     # Comments count
     comments_counts_query = (
@@ -107,6 +104,7 @@ def _enrich_posts_metadata(
     results: List[PostResponse] = []
     for p in posts:
         author_prof = profile_map.get(p.author_id)
+        single_reaction = user_reaction_map.get(p.id)
         results.append(
             PostResponse(
                 id=p.id,
@@ -122,7 +120,8 @@ def _enrich_posts_metadata(
                 author=_build_author_public(author_prof, p.author_id),
                 likes_count=likes_count_map.get(p.id, 0),
                 is_liked_by_user=(p.id in user_liked_post_ids),
-                user_reactions=user_reactions_map.get(p.id, []),
+                user_reaction=single_reaction,
+                user_reactions=[single_reaction] if single_reaction else [],
                 reactions_summary=reactions_summary_map.get(p.id, {}),
                 comments_count=comments_count_map.get(p.id, 0),
                 created_at=p.created_at,
@@ -320,12 +319,14 @@ class PostService:
             .filter(
                 PostReaction.post_id == post_id,
                 PostReaction.user_id == current_user_id,
-                PostReaction.reaction_type == reaction_type_clean,
             )
             .first()
         )
         if existing:
-            db.delete(existing)
+            if existing.reaction_type == reaction_type_clean:
+                db.delete(existing)
+            else:
+                existing.reaction_type = reaction_type_clean
         else:
             db.add(PostReaction(post_id=post_id, user_id=current_user_id, reaction_type=reaction_type_clean))
         db.commit()
@@ -333,18 +334,16 @@ class PostService:
         return PostService.get_single_post(db, post_id, current_user_id)
 
     @staticmethod
-    def remove_reaction(db: Session, post_id: UUID, current_user_id: UUID, reaction_type: str) -> PostResponse:
+    def remove_reaction(db: Session, post_id: UUID, current_user_id: UUID) -> PostResponse:
         post = db.query(ActivityPost).filter(ActivityPost.id == post_id).first()
         if not post:
             raise PostNotFoundException("Post not found.")
 
-        reaction_type_clean = reaction_type.strip().upper()
         existing = (
             db.query(PostReaction)
             .filter(
                 PostReaction.post_id == post_id,
                 PostReaction.user_id == current_user_id,
-                PostReaction.reaction_type == reaction_type_clean,
             )
             .first()
         )
@@ -420,6 +419,40 @@ class PostService:
         )
 
     @staticmethod
+    def update_comment(
+        db: Session,
+        post_id: UUID,
+        comment_id: UUID,
+        current_user_id: UUID,
+        data: CommentCreate,
+    ) -> CommentResponse:
+        comment = (
+            db.query(PostComment)
+            .filter(PostComment.id == comment_id, PostComment.post_id == post_id)
+            .first()
+        )
+        if not comment:
+            raise PostNotFoundException("Comment not found.")
+
+        if comment.author_id != current_user_id:
+            raise UnauthorizedPostActionException("You can only edit your own comments.")
+
+        comment.content = data.content
+        db.commit()
+        db.refresh(comment)
+
+        profile = db.query(Profile).filter(Profile.user_id == current_user_id).first()
+        return CommentResponse(
+            id=comment.id,
+            post_id=comment.post_id,
+            author_id=comment.author_id,
+            content=comment.content,
+            author=_build_author_public(profile, current_user_id),
+            created_at=comment.created_at,
+            updated_at=comment.updated_at,
+        )
+
+    @staticmethod
     def delete_comment(db: Session, post_id: UUID, comment_id: UUID, current_user_id: UUID) -> None:
         comment = (
             db.query(PostComment)
@@ -434,3 +467,4 @@ class PostService:
 
         db.delete(comment)
         db.commit()
+

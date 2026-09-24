@@ -28,16 +28,17 @@ class PostReaction(Base):
     id = Column(GUID, primary_key=True, default=uuid.uuid4)
     post_id = Column(GUID, ForeignKey("activity_posts.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(GUID, nullable=False, index=True)
-    reaction_type = Column(String(20), nullable=False)  # e.g., THUMBS_UP, HEART, FIRE, ROCKET, LIGHTBULB
+    reaction_type = Column(String(30), nullable=False)  # LOVE, INTERESTING, CURIOUS, SUPPORT, CONNECT
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("post_id", "user_id", "reaction_type", name="uq_post_reaction"),
+        UniqueConstraint("post_id", "user_id", name="uq_post_reaction_user"),
         Index("ix_post_reactions_post_user", "post_id", "user_id"),
     )
 
     def __repr__(self) -> str:
         return f"<PostReaction post={self.post_id} user={self.user_id} type={self.reaction_type}>"
+
 
 
 class PostComment(Base):

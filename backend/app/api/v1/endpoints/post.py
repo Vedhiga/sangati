@@ -165,6 +165,22 @@ def toggle_reaction(
 
 
 @router.delete(
+    "/{post_id}/reactions",
+    response_model=PostResponse,
+    summary="Remove current user's reaction from a post",
+)
+def remove_user_reaction(
+    post_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Remove current user's reaction from a post.
+    """
+    return PostService.remove_reaction(db, post_id, current_user.id)
+
+
+@router.delete(
     "/{post_id}/reactions/{reaction_type}",
     response_model=PostResponse,
     summary="Remove emoji reaction from a post",
@@ -178,7 +194,7 @@ def remove_reaction(
     """
     Explicitly remove a reaction type from a post.
     """
-    return PostService.remove_reaction(db, post_id, current_user.id, reaction_type)
+    return PostService.remove_reaction(db, post_id, current_user.id)
 
 
 # --- COMMENTS ---
@@ -216,6 +232,24 @@ def create_comment(
     return PostService.create_comment(db, post_id, current_user.id, data)
 
 
+@router.put(
+    "/{post_id}/comments/{comment_id}",
+    response_model=CommentResponse,
+    summary="Edit own comment on a post",
+)
+def update_comment(
+    post_id: UUID,
+    comment_id: UUID,
+    data: CommentCreate,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Edit an existing comment. Only the comment author can edit it.
+    """
+    return PostService.update_comment(db, post_id, comment_id, current_user.id, data)
+
+
 @router.delete(
     "/{post_id}/comments/{comment_id}",
     summary="Delete own comment on a post",
@@ -231,3 +265,4 @@ def delete_comment(
     """
     PostService.delete_comment(db, post_id, comment_id, current_user.id)
     return {"success": True, "message": "Comment deleted successfully."}
+

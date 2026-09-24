@@ -134,6 +134,7 @@ export interface Post {
   author: AuthorPublic;
   likes_count?: number;
   is_liked_by_user?: boolean;
+  user_reaction?: string | null;
   user_reactions?: string[];
   reactions_summary?: Record<string, number>;
   comments_count?: number;

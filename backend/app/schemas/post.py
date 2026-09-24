@@ -84,6 +84,23 @@ class CommentCreate(BaseModel):
         return trimmed
 
 
+class CommentUpdate(BaseModel):
+    content: str = Field(
+        ...,
+        min_length=1,
+        max_length=1000,
+        description="Updated comment text up to 1000 characters.",
+    )
+
+    @field_validator("content")
+    @classmethod
+    def validate_content_not_blank(cls, v: str) -> str:
+        trimmed = v.strip()
+        if not trimmed:
+            raise ValueError("Comment content cannot be empty or whitespace only.")
+        return trimmed
+
+
 class CommentResponse(BaseModel):
     id: UUID
     post_id: UUID
@@ -104,7 +121,7 @@ class CommentsListResponse(BaseModel):
 
 
 class ReactionToggleRequest(BaseModel):
-    reaction_type: str = Field(..., description="Reaction type e.g. THUMBS_UP, HEART, FIRE, ROCKET, LIGHTBULB")
+    reaction_type: str = Field(..., description="Reaction type e.g. LOVE, INTERESTING, CURIOUS, SUPPORT, CONNECT")
 
 
 class PostResponse(BaseModel):
@@ -121,11 +138,13 @@ class PostResponse(BaseModel):
     author: AuthorPublic
     likes_count: int = 0
     is_liked_by_user: bool = False
+    user_reaction: Optional[str] = None
     user_reactions: List[str] = Field(default_factory=list)
     reactions_summary: Dict[str, int] = Field(default_factory=dict)
     comments_count: int = 0
     created_at: datetime
     updated_at: datetime
+
 
     model_config = {
         "from_attributes": True,

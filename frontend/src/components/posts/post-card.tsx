@@ -14,16 +14,27 @@ import {
   Clock,
   ExternalLink,
   Globe,
-  Heart,
-  MessageCircle,
+  Heart as HeartIcon,
+  MessageCircle as MessageCircleIcon,
+  Share2 as Share2Icon,
   Send,
 } from "lucide-react";
 import { ActivityType, Post, Comment, CommentsListResponse } from "@/types";
 import { api, ApiClientError } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonGroup } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+
+
+import {
+  RedHeartIcon,
+  FireIcon,
+  EyesIcon,
+  RaisingHandsLightSkinToneIcon,
+  HandshakeMediumLightSkinToneIcon,
+} from "@/components/icons/reaction-icons";
 
 interface PostCardProps {
   post: Post;
@@ -31,6 +42,7 @@ interface PostCardProps {
   onPostUpdated?: (updatedPost: Post) => void;
   onPostDeleted?: (postId: string) => void;
 }
+
 
 interface ActivityMeta {
   type: ActivityType;
@@ -66,13 +78,14 @@ const ACTIVITY_MAP: Record<ActivityType, ActivityMeta> = {
   },
 };
 
-const EMOJI_REACTIONS: { type: string; emoji: string }[] = [
-  { type: "THUMBS_UP", emoji: "👍" },
-  { type: "HEART", emoji: "❤️" },
-  { type: "FIRE", emoji: "🔥" },
-  { type: "ROCKET", emoji: "🚀" },
-  { type: "LIGHTBULB", emoji: "💡" },
+const CUSTOM_REACTIONS: { type: string; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+  { type: "LOVE", label: "Love", Icon: RedHeartIcon },
+  { type: "INTERESTING", label: "Interesting", Icon: FireIcon },
+  { type: "CURIOUS", label: "Curious", Icon: EyesIcon },
+  { type: "SUPPORT", label: "Support", Icon: RaisingHandsLightSkinToneIcon },
+  { type: "CONNECT", label: "Connect", Icon: HandshakeMediumLightSkinToneIcon },
 ];
+
 
 function formatRelativeTime(dateString: string): string {
   try {
@@ -125,6 +138,35 @@ export function PostCard({
   const [newComment, setNewComment] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+
+  // Share State
+  const [copiedShare, setCopiedShare] = useState(false);
+
+  const handleShare = async () => {
+    const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/feed#post-${post.id}` : "";
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Post by @${post.author.username} on Sangati`,
+          text: post.content.slice(0, 100),
+          url: shareUrl,
+        });
+        return;
+      } catch {
+        // Fallback to clipboard if share dialog was canceled or unsupported
+      }
+    }
+    if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopiedShare(true);
+        setTimeout(() => setCopiedShare(false), 2000);
+      } catch (err) {
+        console.error("Failed to copy share link:", err);
+      }
+    }
+  };
+
 
   const isAuthor = currentUserId && post.author_id === currentUserId;
   const activityMeta = ACTIVITY_MAP[post.activity_type] || ACTIVITY_MAP.BUILD;
@@ -255,6 +297,40 @@ export function PostCard({
     }
   };
 
+  // Comment Editing State
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editCommentContent, setEditCommentContent] = useState("");
+  const [isSavingCommentEdit, setIsSavingCommentEdit] = useState(false);
+
+  const handleStartEditComment = (commentId: string, currentContent: string) => {
+    setEditingCommentId(commentId);
+    setEditCommentContent(currentContent);
+  };
+
+  const handleCancelCommentEdit = () => {
+    setEditingCommentId(null);
+    setEditCommentContent("");
+  };
+
+  const handleSaveCommentEdit = async (commentId: string) => {
+    const trimmed = editCommentContent.trim();
+    if (!trimmed || isSavingCommentEdit || !currentUserId) return;
+
+    setIsSavingCommentEdit(true);
+    try {
+      const updated = await api.put<Comment>(`/api/v1/posts/${post.id}/comments/${commentId}`, {
+        content: trimmed,
+      });
+      setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
+      setEditingCommentId(null);
+      setEditCommentContent("");
+    } catch (err) {
+      console.error("Failed to update comment:", err);
+    } finally {
+      setIsSavingCommentEdit(false);
+    }
+  };
+
   const handleDeleteComment = async (commentId: string) => {
     if (deletingCommentId || !currentUserId) return;
     setDeletingCommentId(commentId);
@@ -268,6 +344,7 @@ export function PostCard({
       setDeletingCommentId(null);
     }
   };
+
 
   const getDomain = (url: string) => {
     try {
@@ -476,61 +553,77 @@ export function PostCard({
           </div>
         )}
 
-        {/* INTERACTION BAR: LIKES, REACTION PICKER, COMMENTS TOGGLE */}
-        <div className="pt-3 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {/* Like Button */}
+        {/* INTERACTION BAR: BUTTON GROUP & REACTION PICKER */}
+        <div className="pt-3 border-t border-white/[0.06] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <ButtonGroup className="w-full sm:w-auto flex">
             <Button
-              variant="ghost"
               size="sm"
+              variant="outline"
               onClick={handleToggleLike}
               disabled={isLiking}
-              className={`h-8 px-3 rounded-full text-xs font-mono gap-1.5 transition-colors ${
-                post.is_liked_by_user
-                  ? "text-rose-400 bg-rose-500/10 border border-rose-500/20"
-                  : "text-[#8A8A8A] hover:text-white hover:bg-white/5"
-              }`}
+              className={cn(
+                "flex-1 sm:flex-initial text-xs gap-1.5 transition-colors border-white/10 bg-zinc-950/40 hover:bg-white/10 hover:text-white",
+                post.is_liked_by_user && "text-rose-400 border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20"
+              )}
             >
-              <Heart className={`h-3.5 w-3.5 ${post.is_liked_by_user ? "fill-rose-400 text-rose-400" : ""}`} />
-              <span>{post.likes_count || 0}</span>
+              <HeartIcon className={cn("h-4 w-4", post.is_liked_by_user && "fill-rose-400 text-rose-400")} />
+              <span>Like</span>
+              {(post.likes_count ?? 0) > 0 && (
+                <span className="text-[10px] font-mono opacity-70">({post.likes_count})</span>
+              )}
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={toggleCommentsSection}
+              className={cn(
+                "flex-1 sm:flex-initial text-xs gap-1.5 transition-colors border-white/10 bg-zinc-950/40 hover:bg-white/10 hover:text-white",
+                showComments && "bg-white/15 text-white border-white/20"
+              )}
+            >
+              <MessageCircleIcon className="h-4 w-4" />
+              <span>Comment</span>
+              {commentsCount > 0 && (
+                <span className="text-[10px] font-mono opacity-70">({commentsCount})</span>
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleShare}
+              className="flex-1 sm:flex-initial text-xs gap-1.5 transition-colors border-white/10 bg-zinc-950/40 hover:bg-white/10 hover:text-white"
+            >
+              <Share2Icon className="h-4 w-4" />
+              <span>{copiedShare ? "Copied!" : "Share"}</span>
+            </Button>
+          </ButtonGroup>
 
-            {/* Reaction Emoji Buttons */}
-            <div className="flex items-center gap-1 bg-white/[0.02] border border-white/10 rounded-full px-1.5 py-0.5">
-              {EMOJI_REACTIONS.map(({ type, emoji }) => {
-                const count = post.reactions_summary?.[type] || 0;
-                const isReacted = post.user_reactions?.includes(type);
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => handleToggleReaction(type)}
-                    className={`h-7 px-2 rounded-full text-xs flex items-center gap-1 transition-all ${
-                      isReacted
-                        ? "bg-white/15 border border-white/30 text-white scale-105"
-                        : "hover:bg-white/10 text-[#8A8A8A]"
-                    }`}
-                    title={type}
-                  >
-                    <span>{emoji}</span>
-                    {count > 0 && <span className="text-[10px] font-mono">{count}</span>}
-                  </button>
-                );
-              })}
-            </div>
+          {/* Custom SVG Reaction Buttons */}
+          <div className="flex items-center gap-1 bg-white/[0.02] border border-white/10 rounded-lg px-1.5 py-1 self-start sm:self-auto">
+            {CUSTOM_REACTIONS.map(({ type, label, Icon }) => {
+              const count = post.reactions_summary?.[type] || 0;
+              const isReacted = post.user_reaction === type || post.user_reactions?.includes(type);
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => handleToggleReaction(type)}
+                  className={cn(
+                    "h-7 px-2 rounded-md text-xs flex items-center gap-1.5 transition-all",
+                    isReacted
+                      ? "bg-white/15 border border-white/30 text-white scale-105 shadow-sm"
+                      : "hover:bg-white/10 text-[#8A8A8A]"
+                  )}
+                  title={label}
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  {count > 0 && <span className="text-[10px] font-mono">{count}</span>}
+                </button>
+              );
+            })}
           </div>
-
-          {/* Comments Toggle Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleCommentsSection}
-            className="h-8 px-3 rounded-full text-xs font-mono gap-1.5 text-[#8A8A8A] hover:text-white hover:bg-white/5"
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
-            <span>{commentsCount} {commentsCount === 1 ? "Comment" : "Comments"}</span>
-          </Button>
         </div>
+
 
         {/* EXPANDABLE COMMENTS SECTION */}
         {showComments && (
@@ -573,6 +666,7 @@ export function PostCard({
               <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
                 {comments.map((comment) => {
                   const isCommentAuthor = currentUserId && comment.author_id === currentUserId;
+                  const isEditingThisComment = editingCommentId === comment.id;
                   const cInitials = comment.author.display_name
                     ? comment.author.display_name
                         .split(" ")
@@ -587,14 +681,14 @@ export function PostCard({
                       key={comment.id}
                       className="p-3 rounded-xl border border-white/[0.06] bg-white/[0.015] flex items-start justify-between gap-3 text-xs"
                     >
-                      <div className="flex items-start gap-2.5 min-w-0">
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
                         <Avatar className="h-7 w-7 border border-white/10 shrink-0 mt-0.5">
                           <AvatarImage src={comment.author.avatar_url || undefined} alt={comment.author.display_name} />
                           <AvatarFallback className="bg-zinc-900 text-[#F5F5F3] text-[10px] font-semibold">
                             {cInitials}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="min-w-0 space-y-0.5">
+                        <div className="min-w-0 space-y-1 flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-[#F5F5F3] truncate">
                               {comment.author.display_name}
@@ -606,27 +700,73 @@ export function PostCard({
                               • {formatRelativeTime(comment.created_at)}
                             </span>
                           </div>
-                          <p className="text-[#F5F5F3] leading-relaxed whitespace-pre-wrap break-words font-normal">
-                            {comment.content}
-                          </p>
+
+                          {isEditingThisComment ? (
+                            <div className="space-y-2 pt-1">
+                              <Textarea
+                                value={editCommentContent}
+                                onChange={(e) => setEditCommentContent(e.target.value)}
+                                className="text-xs min-h-[50px] bg-[#0A0A0A] border-white/20 text-[#F5F5F3] rounded-lg"
+                                maxLength={500}
+                                autoFocus
+                              />
+                              <div className="flex items-center gap-1.5 justify-end">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={handleCancelCommentEdit}
+                                  className="h-6 text-[11px] px-2 text-[#8A8A8A] hover:text-white"
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  disabled={isSavingCommentEdit || !editCommentContent.trim()}
+                                  onClick={() => handleSaveCommentEdit(comment.id)}
+                                  className="h-6 text-[11px] px-2.5 bg-[#F5F5F3] text-black hover:bg-white"
+                                >
+                                  {isSavingCommentEdit ? (
+                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                  ) : (
+                                    <Check className="h-3 w-3 mr-1" />
+                                  )}
+                                  Save
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-[#F5F5F3] leading-relaxed whitespace-pre-wrap break-words font-normal">
+                              {comment.content}
+                            </p>
+                          )}
                         </div>
                       </div>
 
-                      {/* Delete comment action */}
-                      {isCommentAuthor && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={deletingCommentId === comment.id}
-                          onClick={() => handleDeleteComment(comment.id)}
-                          className="h-6 w-6 p-0 text-[#8A8A8A] hover:text-rose-400 hover:bg-white/5 shrink-0"
-                        >
-                          {deletingCommentId === comment.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3 w-3" />
-                          )}
-                        </Button>
+                      {/* Comment author actions */}
+                      {isCommentAuthor && !isEditingThisComment && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleStartEditComment(comment.id, comment.content)}
+                            className="h-6 w-6 p-0 text-[#8A8A8A] hover:text-white hover:bg-white/5"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={deletingCommentId === comment.id}
+                            onClick={() => handleDeleteComment(comment.id)}
+                            className="h-6 w-6 p-0 text-[#8A8A8A] hover:text-rose-400 hover:bg-white/5"
+                          >
+                            {deletingCommentId === comment.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
                       )}
                     </div>
                   );
@@ -635,6 +775,7 @@ export function PostCard({
             )}
           </div>
         )}
+
       </CardContent>
     </Card>
   );

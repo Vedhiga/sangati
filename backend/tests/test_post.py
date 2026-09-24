@@ -249,31 +249,41 @@ def test_post_likes_reactions_comments(client, test_user_id, test_user_2_id):
     assert data_like2["likes_count"] == 0
     assert data_like2["is_liked_by_user"] is False
 
-    # 3. Reactions (Alice FIRE, Bob FIRE & HEART)
-    res_react1 = client.post(f"/api/v1/posts/{post_id}/reactions", json={"reaction_type": "FIRE"}, headers=headers_a)
+    # 3. Single reaction per user (LOVE, INTERESTING, CURIOUS, SUPPORT, CONNECT)
+    res_react1 = client.post(f"/api/v1/posts/{post_id}/reactions", json={"reaction_type": "LOVE"}, headers=headers_a)
     assert res_react1.status_code == 200
     data_r1 = res_react1.json()
-    assert data_r1["reactions_summary"]["FIRE"] == 1
-    assert "FIRE" in data_r1["user_reactions"]
+    assert data_r1["reactions_summary"]["LOVE"] == 1
+    assert data_r1["user_reaction"] == "LOVE"
 
-    res_react2 = client.post(f"/api/v1/posts/{post_id}/reactions", json={"reaction_type": "FIRE"}, headers=headers_b)
+    # Alice changes reaction from LOVE to INTERESTING
+    res_react2 = client.post(f"/api/v1/posts/{post_id}/reactions", json={"reaction_type": "INTERESTING"}, headers=headers_a)
     assert res_react2.status_code == 200
     data_r2 = res_react2.json()
-    assert data_r2["reactions_summary"]["FIRE"] == 2
+    assert data_r2["reactions_summary"].get("LOVE", 0) == 0
+    assert data_r2["reactions_summary"]["INTERESTING"] == 1
+    assert data_r2["user_reaction"] == "INTERESTING"
 
-    res_react3 = client.post(f"/api/v1/posts/{post_id}/reactions", json={"reaction_type": "HEART"}, headers=headers_b)
+    # Bob reacts SUPPORT
+    res_react3 = client.post(f"/api/v1/posts/{post_id}/reactions", json={"reaction_type": "SUPPORT"}, headers=headers_b)
     assert res_react3.status_code == 200
     data_r3 = res_react3.json()
-    assert data_r3["reactions_summary"]["HEART"] == 1
+    assert data_r3["reactions_summary"]["SUPPORT"] == 1
+    assert data_r3["reactions_summary"]["INTERESTING"] == 1
 
-    # Remove reaction
-    res_unreact = client.delete(f"/api/v1/posts/{post_id}/reactions/FIRE", headers=headers_a)
+    # Alice toggles INTERESTING again (removes reaction)
+    res_unreact = client.post(f"/api/v1/posts/{post_id}/reactions", json={"reaction_type": "INTERESTING"}, headers=headers_a)
     assert res_unreact.status_code == 200
     data_unreact = res_unreact.json()
-    assert data_unreact["reactions_summary"]["FIRE"] == 1
-    assert "FIRE" not in data_unreact["user_reactions"]
+    assert data_unreact["reactions_summary"].get("INTERESTING", 0) == 0
+    assert data_unreact["user_reaction"] is None
 
-    # 4. Comments
+    # Explicit DELETE endpoint to remove reaction
+    res_del_react = client.delete(f"/api/v1/posts/{post_id}/reactions", headers=headers_b)
+    assert res_del_react.status_code == 200
+    assert res_del_react.json()["reactions_summary"].get("SUPPORT", 0) == 0
+
+    # 4. Comments (create, list, edit, delete)
     res_cmt1 = client.post(f"/api/v1/posts/{post_id}/comments", json={"content": "Great build!"}, headers=headers_b)
     assert res_cmt1.status_code == 201
     cmt1_data = res_cmt1.json()
@@ -292,6 +302,15 @@ def test_post_likes_reactions_comments(client, test_user_id, test_user_2_id):
     assert cmts_data["total"] == 2
     assert [c["id"] for c in cmts_data["comments"]] == [cmt1_id, cmt2_id]
 
+    # Alice tries to edit Bob's comment -> 403
+    res_bad_edit = client.put(f"/api/v1/posts/{post_id}/comments/{cmt1_id}", json={"content": "Hacked comment"}, headers=headers_a)
+    assert res_bad_edit.status_code == 403
+
+    # Bob edits his own comment -> 200
+    res_ok_edit = client.put(f"/api/v1/posts/{post_id}/comments/{cmt1_id}", json={"content": "Great build! Excited to try it."}, headers=headers_b)
+    assert res_ok_edit.status_code == 200
+    assert res_ok_edit.json()["content"] == "Great build! Excited to try it."
+
     # Bob tries to delete Alice's comment -> 403
     res_bad_del = client.delete(f"/api/v1/posts/{post_id}/comments/{cmt2_id}", headers=headers_b)
     assert res_bad_del.status_code == 403
@@ -303,4 +322,6 @@ def test_post_likes_reactions_comments(client, test_user_id, test_user_2_id):
     # Remaining comments count is 1
     res_cmts_after = client.get(f"/api/v1/posts/{post_id}/comments", headers=headers_a)
     assert res_cmts_after.json()["total"] == 1
+    assert res_cmts_after.json()["comments"][0]["content"] == "Great build! Excited to try it."
+
 
