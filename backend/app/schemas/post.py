@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import UUID
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schemas.activity import ActivityType
 
@@ -22,9 +22,8 @@ class PostCreate(BaseModel):
         ...,
         description="Contextual activity: BUILD, LEARN, CONVERSATION, or EXPLORE.",
     )
-    content: str = Field(
-        ...,
-        min_length=1,
+    content: Optional[str] = Field(
+        "",
         max_length=1000,
         description="Content of the post, up to 1000 characters.",
     )
@@ -35,19 +34,24 @@ class PostCreate(BaseModel):
     link_description: Optional[str] = None
     link_image: Optional[str] = None
 
-    @field_validator("content")
-    @classmethod
-    def validate_content_not_blank(cls, v: str) -> str:
-        trimmed = v.strip()
-        if not trimmed:
-            raise ValueError("Post content cannot be empty or whitespace only.")
-        return trimmed
+    @model_validator(mode="after")
+    def validate_content_or_media(self) -> "PostCreate":
+        has_content = bool(self.content and self.content.strip())
+        has_media = bool(self.media_url and self.media_url.strip())
+        has_link = bool(self.link_url and self.link_url.strip())
+
+        if not (has_content or has_media or has_link):
+            raise ValueError("Post must contain text content, attached media, or a link.")
+        if self.content:
+            self.content = self.content.strip()
+        else:
+            self.content = ""
+        return self
 
 
 class PostUpdate(BaseModel):
-    content: str = Field(
-        ...,
-        min_length=1,
+    content: Optional[str] = Field(
+        "",
         max_length=1000,
         description="Updated post content, up to 1000 characters.",
     )
@@ -58,13 +62,11 @@ class PostUpdate(BaseModel):
     link_description: Optional[str] = None
     link_image: Optional[str] = None
 
-    @field_validator("content")
-    @classmethod
-    def validate_content_not_blank(cls, v: str) -> str:
-        trimmed = v.strip()
-        if not trimmed:
-            raise ValueError("Post content cannot be empty or whitespace only.")
-        return trimmed
+    @model_validator(mode="after")
+    def validate_content_or_media(self) -> "PostUpdate":
+        if self.content:
+            self.content = self.content.strip()
+        return self
 
 
 class CommentCreate(BaseModel):

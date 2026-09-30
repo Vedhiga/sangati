@@ -20,10 +20,8 @@ ALLOWED_VIDEO_TYPES = {"video/mp4", "video/webm", "video/quicktime"}
 
 
 def get_upload_dir() -> str:
-    target_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-        "static",
-        "uploads",
+    target_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "..", "static", "uploads")
     )
     try:
         os.makedirs(target_dir, exist_ok=True)

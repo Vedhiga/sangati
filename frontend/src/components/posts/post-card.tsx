@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { ActivityType, Post, Comment, CommentsListResponse } from "@/types";
 import { api, ApiClientError } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, resolveMediaUrl } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, ButtonGroup } from "@/components/ui/button";
@@ -506,7 +506,7 @@ export function PostCard({
               >
                 {post.link_image && (
                   <img
-                    src={post.link_image}
+                    src={resolveMediaUrl(post.link_image)}
                     alt={post.link_title || "Link preview"}
                     className="w-full h-40 object-cover border-b border-white/[0.08]"
                   />
@@ -536,14 +536,14 @@ export function PostCard({
               <div className="rounded-xl overflow-hidden border border-white/[0.08] bg-black">
                 {post.media_type === "video" ? (
                   <video
-                    src={post.media_url}
+                    src={resolveMediaUrl(post.media_url)}
                     controls
                     preload="metadata"
                     className="w-full max-h-96 object-contain"
                   />
                 ) : (
                   <img
-                    src={post.media_url}
+                    src={resolveMediaUrl(post.media_url)}
                     alt="Attached post media"
                     className="w-full max-h-96 object-cover"
                   />

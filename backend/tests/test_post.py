@@ -325,3 +325,48 @@ def test_post_likes_reactions_comments(client, test_user_id, test_user_2_id):
     assert res_cmts_after.json()["comments"][0]["content"] == "Great build! Excited to try it."
 
 
+def test_media_only_and_link_posts(client, test_user_id):
+    token = create_mock_jwt(test_user_id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Setup profile
+    client.post(
+        "/api/v1/profile",
+        json={"username": "media_author", "display_name": "Media Author"},
+        headers=headers,
+    )
+
+    # 1. Media-only post (empty text content, but valid media_url)
+    res_media_post = client.post(
+        "/api/v1/posts",
+        json={
+            "activity_type": "BUILD",
+            "content": "",
+            "media_url": "/static/uploads/sample.jpg",
+            "media_type": "image",
+        },
+        headers=headers,
+    )
+    assert res_media_post.status_code == 201
+    data_media = res_media_post.json()
+    assert data_media["media_url"] == "/static/uploads/sample.jpg"
+    assert data_media["media_type"] == "image"
+
+    # 2. Link-only post (empty text content, but valid link_url)
+    res_link_post = client.post(
+        "/api/v1/posts",
+        json={
+            "activity_type": "EXPLORE",
+            "content": "",
+            "link_url": "https://example.com/tech-article",
+            "link_title": "Tech Article",
+        },
+        headers=headers,
+    )
+    assert res_link_post.status_code == 201
+    data_link = res_link_post.json()
+    assert data_link["link_url"] == "https://example.com/tech-article"
+    assert data_link["link_title"] == "Tech Article"
+
+
+

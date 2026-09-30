@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { LiquidMetalButton } from "@/components/ui/liquid-metal";
+import { resolveMediaUrl } from "@/lib/utils";
 
 interface PostComposerProps {
   defaultActivity?: ActivityType | null;
@@ -347,13 +348,13 @@ export function PostComposer({ defaultActivity, onPostCreated }: PostComposerPro
                   <div className="relative group rounded-xl overflow-hidden border border-white/10 max-h-56 bg-black">
                     {mediaAttachment.type === "image" ? (
                       <img
-                        src={mediaAttachment.previewUrl || mediaAttachment.url}
+                        src={mediaAttachment.previewUrl || resolveMediaUrl(mediaAttachment.url)}
                         alt="Media upload preview"
                         className="w-full h-48 object-cover"
                       />
                     ) : (
                       <video
-                        src={mediaAttachment.previewUrl || mediaAttachment.url}
+                        src={mediaAttachment.previewUrl || resolveMediaUrl(mediaAttachment.url)}
                         controls
                         className="w-full h-48 object-cover"
                       />
