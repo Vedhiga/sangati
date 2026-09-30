@@ -493,7 +493,7 @@ class ConversationService:
             db.query(Notification)
             .filter(
                 Notification.recipient_id == current_user_id,
-                Notification.type == NotificationType.NEW_MESSAGE,
+                Notification.type == NotificationType.NEW_MESSAGE.value,
                 Notification.is_read == False,
             )
             .count()
@@ -507,7 +507,7 @@ class ConversationService:
         """
         db.query(Notification).filter(
             Notification.recipient_id == current_user_id,
-            Notification.type == NotificationType.NEW_MESSAGE,
+            Notification.type == NotificationType.NEW_MESSAGE.value,
             Notification.reference_id == conversation_id,
             Notification.is_read == False,
         ).update({"is_read": True}, synchronize_session=False)

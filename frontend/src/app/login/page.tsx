@@ -13,6 +13,29 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LiquidMetalButton } from "@/components/ui/liquid-metal";
 
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24">
+      <path
+        fill="#EA4335"
+        d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 10.8 0 12.3s.7 2.6 1.9 5l3.7-2.5z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"
+      />
+    </svg>
+  );
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -20,6 +43,28 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setIsGoogleLoading(true);
+    try {
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (authError) {
+        setError(authError.message || "Failed to initiate Google Sign-In.");
+        setIsGoogleLoading(false);
+      }
+    } catch (err) {
+      setError("An unexpected error occurred during Google Sign-In.");
+      setIsGoogleLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,15 +124,40 @@ export default function LoginPage() {
           </div>
         </CardHeader>
 
-        <CardContent className="px-6 pb-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <Alert variant="destructive" className="rounded-xl bg-rose-950/40 text-rose-300 border-rose-800/40">
-                <CircleAlert className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+        <CardContent className="px-6 pb-6 space-y-4">
+          {error && (
+            <Alert variant="destructive" className="rounded-xl bg-rose-950/40 text-rose-300 border-rose-800/40">
+              <CircleAlert className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
+          {/* Continue with Google Button */}
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isLoading || isGoogleLoading}
+            onClick={handleGoogleSignIn}
+            className="w-full h-10 rounded-xl border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-100 font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+          >
+            {isGoogleLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
+            ) : (
+              <GoogleIcon className="h-4 w-4 shrink-0" />
+            )}
+            <span>Continue with Google</span>
+          </Button>
+
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-zinc-800/80" />
+            </div>
+            <div className="relative flex justify-center text-[10px] uppercase font-mono tracking-wider">
+              <span className="bg-[#0A0A0A] px-2 text-zinc-500">or continue with email</span>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-xs font-semibold text-zinc-300">Email address</Label>
               <Input
@@ -98,7 +168,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                disabled={isLoading}
+                disabled={isLoading || isGoogleLoading}
                 className="rounded-xl border-zinc-800 bg-zinc-900/60 text-zinc-100 focus-visible:ring-zinc-700 placeholder:text-zinc-500"
               />
             </div>
@@ -114,7 +184,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
-                  disabled={isLoading}
+                  disabled={isLoading || isGoogleLoading}
                   className="pr-10 rounded-xl border-zinc-800 bg-zinc-900/60 text-zinc-100 focus-visible:ring-zinc-700 placeholder:text-zinc-500"
                 />
                 <button
@@ -135,7 +205,7 @@ export default function LoginPage() {
 
             <LiquidMetalButton
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isGoogleLoading}
               size="md"
               className="w-full mt-2"
               icon={isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
